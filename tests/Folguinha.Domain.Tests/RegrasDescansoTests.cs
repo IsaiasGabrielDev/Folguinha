@@ -68,6 +68,19 @@ public class DiasConsecutivosTests
     }
 
     [Fact]
+    public void Aponta_sequencia_longa_que_vem_de_antes_do_periodo()
+    {
+        var f = Func();
+        var dias = Enumerable.Range(20, 11).Select(d => Trab(f, D(d, 9), "08:00", "15:20"))
+            .Append(Trab(f, D(1), "08:00", "15:20")).ToArray();
+
+        var v = Assert.Single(_regra.Validar(Ctx([f], dias)));
+
+        Assert.Equal(D(1), v.Data);
+        Assert.Contains("12 dias seguidos", v.Mensagem);
+    }
+
+    [Fact]
     public void Aceita_seis_dias_seguidos()
     {
         var f = Func();

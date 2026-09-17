@@ -6,30 +6,28 @@
 @using Folguinha.Infrastructure.Planilhas
 @using Folguinha.Web.Servicos
 @inject Navegador Navegador
-@inject RepositorioDados Repositorio
-@inject NavigationManager Nav
 
 <PageTitle>Diagnóstico · Folguinha</PageTitle>
 
-<main class="diagnostico">
-    <h1>Diagnóstico</h1>
-    <p>Testa o armazenamento, o motor de escalas e a planilha neste aparelho.</p>
+<div class="diagnostico pilha">
+    <Cabecalho Titulo="Diagnóstico" Voltar="mais" />
+    <p class="ajuda">Testa o armazenamento, o motor de escalas e a planilha neste aparelho, com uma loja de teste separada (seus dados não são tocados).</p>
 
-    <dl>
+    <dl class="cartao">
         <dt>Armazenamento</dt><dd>@_persistencia</dd>
         <dt>Instalado na tela inicial</dt><dd>@(_instalado ? "sim" : "não")</dd>
         <dt>Espaço usado</dt><dd>@(_espacoKb < 0 ? "?" : $"{_espacoKb} KB")</dd>
-        <dt>Dados salvos</dt><dd>@Resumo(_dados)</dd>
+        <dt>Loja de teste</dt><dd>@Resumo(_dados)</dd>
     </dl>
 
     <div class="acoes">
-        <button @onclick="CriarExemplo">Criar loja de exemplo</button>
-        <button @onclick="Recarregar">Ler de novo</button>
-        <button @onclick="GerarEscala" disabled="@(_dados.Funcionarios.Count == 0)">Gerar outubro/2026</button>
-        <button @onclick="BaixarPlanilha" disabled="@(Alocacoes.Count == 0)">Planilha de teste</button>
-        <button @onclick="ExportarBackup" disabled="@(_dados.Empresa is null)">Exportar backup</button>
-        <label class="botao">Importar backup <InputFile OnChange="ImportarBackup" accept=".json,application/json" /></label>
-        <button @onclick="Apagar">Apagar tudo</button>
+        <button class="botao pequeno" @onclick="CriarExemplo">Criar loja de exemplo</button>
+        <button class="botao pequeno" @onclick="Recarregar">Ler de novo</button>
+        <button class="botao pequeno" @onclick="GerarEscala" disabled="@(_dados.Funcionarios.Count == 0)">Gerar outubro/2026</button>
+        <button class="botao pequeno" @onclick="BaixarPlanilha" disabled="@(Alocacoes.Count == 0)">Planilha de teste</button>
+        <button class="botao pequeno" @onclick="ExportarBackup" disabled="@(_dados.Empresa is null)">Exportar backup</button>
+        <label class="botao pequeno">Importar backup <InputFile class="oculto" OnChange="ImportarBackup" accept=".json,application/json" /></label>
+        <button class="botao pequeno" @onclick="Apagar">Apagar loja de teste</button>
     </div>
 
     <ul class="registro" aria-live="polite">
@@ -38,7 +36,7 @@
             <li>@linha</li>
         }
     </ul>
-</main>
+</div>
 
 @code {
     [SupplyParameterFromQuery] public bool Autoteste { get; set; }
@@ -48,6 +46,8 @@
     bool _instalado;
     int _espacoKb = -1;
     readonly List<string> _registro = [];
+    RepositorioDados Repositorio => _repositorio ??= new RepositorioDados(Navegador, "diagnostico");
+    RepositorioDados? _repositorio;
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,7 +78,7 @@
 
     async Task CriarExemplo()
     {
-        await Repositorio.Salvar(Exemplo.Loja());
+        await Repositorio.Salvar(Exemplo.Loja(new(2026, 10, 1)) with { Feriados = [new Feriado(new(2026, 10, 12), "Nossa Senhora Aparecida", AbrangenciaFeriado.Nacional)] });
         await Recarregar();
         Log("Loja de exemplo salva.");
     }
@@ -146,7 +146,7 @@
     {
         await Repositorio.Apagar();
         await Recarregar();
-        Log("Dados apagados.");
+        Log("Loja de teste apagada.");
     }
 
     /// Roda tudo sem interação (?autoteste=true) e escreve AUTOTESTE OK/FALHOU no registro.

@@ -1,0 +1,41 @@
+@* Diálogo: folha inferior no celular, janela central no computador. Esc fecha. *@
+@if (Aberta)
+{
+    <div class="fundo" @onclick="Fechar"></div>
+    <section class="folha" role="dialog" aria-modal="true" aria-labelledby="@_idTitulo" tabindex="-1"
+             @ref="_elemento" @onkeydown="Tecla">
+        <div class="linha entre">
+            <h2 id="@_idTitulo">@Titulo</h2>
+            <button class="botao texto pequeno" type="button" @onclick="Fechar" aria-label="Fechar">
+                <Icone Nome="fechar" Tamanho="20" />
+            </button>
+        </div>
+        @ChildContent
+    </section>
+}
+
+@code {
+    [Parameter] public bool Aberta { get; set; }
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback AoFechar { get; set; }
+
+    readonly string _idTitulo = $"folha-{Guid.NewGuid():N}";
+    ElementReference _elemento;
+    bool _focar;
+
+    protected override void OnParametersSet() => _focar = Aberta;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focar && Aberta)
+        {
+            _focar = false;
+            await _elemento.FocusAsync();
+        }
+    }
+
+    Task Fechar() => AoFechar.InvokeAsync();
+
+    Task Tecla(KeyboardEventArgs e) => e.Key == "Escape" ? Fechar() : Task.CompletedTask;
+}

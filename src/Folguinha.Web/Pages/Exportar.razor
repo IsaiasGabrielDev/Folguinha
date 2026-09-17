@@ -1,0 +1,143 @@
+@page "/exportar"
+@using Folguinha.Infrastructure.Planilhas
+@inherits PaginaBase
+@inject Navegador Navegador
+
+<PageTitle>Exportar · Folguinha</PageTitle>
+
+<Cabecalho Titulo="Exportar" Voltar="mais" />
+
+@if (Dados.Escalas.Count == 0)
+{
+    <Vazio Icone="planilha" Titulo="Nada para exportar" Texto="Gere uma escala primeiro.">
+        <a class="botao primario" href="escala?gerar=1">Gerar escala</a>
+    </Vazio>
+    return;
+}
+
+<div class="grade-2 responsiva">
+    <label class="campo">Escala
+        <select value="@_idEscala" @onchange="TrocarEscala">
+            @foreach (var e in Dados.Escalas.OrderByDescending(e => e.Inicio))
+            {
+                <option value="@e.Id">@Formatos.Periodo(e)</option>
+            }
+        </select>
+    </label>
+    @if (Escala is { } escala)
+    {
+        <label class="campo">Versão
+            <select @bind="_versao">
+                @if (escala.Rascunho is not null)
+                {
+                    <option value="0">@(escala.Versoes.Count == 0 ? "Rascunho (não publicado)" : "Alterações não publicadas")</option>
+                }
+                @foreach (var v in escala.Versoes.Reverse())
+                {
+                    <option value="@v.Numero">Versão @v.Numero · @Formatos.DataHora(v.PublicadaEm)</option>
+                }
+            </select>
+        </label>
+    }
+</div>
+
+@if (_versao == 0)
+{
+    <p class="nota alerta"><Icone Nome="alerta" Tamanho="18" /><span>O arquivo sai marcado como rascunho. Publique antes de enviar à equipe.</span></p>
+}
+
+<fieldset class="pilha">
+    <legend class="sr-only">Planilhas</legend>
+    @foreach (var (campo, titulo, descricao, icone) in Opcoes)
+    {
+        var c = campo;
+        var marcado = Marcado(c);
+        <label class="cartao compacto" style="flex-direction: row; align-items: center; gap: .75rem; cursor: pointer; border: 1.5px solid @(marcado ? "var(--coral)" : "var(--linha)"); box-shadow: none;">
+            <span class="avatar @(marcado ? "avatar-0" : "")" style="border-radius: 14px; @(marcado ? "" : "background: var(--superficie-2);")" aria-hidden="true"><Icone Nome="@icone" Tamanho="20" /></span>
+            <span class="cresce"><strong>@titulo</strong><br /><span class="ajuda pequeno">@descricao</span></span>
+            <input type="checkbox" style="width: 1.5rem; height: 1.5rem; accent-color: var(--coral-forte);" checked="@marcado" @onchange="() => Alternar(c)" />
+        </label>
+    }
+</fieldset>
+
+<div class="linha">
+    <span class="chip chip-verde"><Icone Nome="ok" Tamanho="14" Traco="2.4" /> Excel (.xlsx)</span>
+    <span class="chip">PDF</span>
+    <span class="chip">WhatsApp</span>
+    <span class="ajuda pequeno">PDF e WhatsApp em breve</span>
+</div>
+
+<button class="botao primario" disabled="@(_gerando || !(_individuais || _consolidada || _relatorio))" @onclick="Gerar">
+    <Icone Nome="compartilhar" Tamanho="20" Traco="2" /> @(_gerando ? "Gerando…" : "Gerar e compartilhar")
+</button>
+<p class="ajuda pequeno" style="text-align: center;">A escala planejada não comprova a jornada realizada.</p>
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")] public Guid? IdPedido { get; set; }
+    [SupplyParameterFromQuery(Name = "versao")] public int? VersaoPedida { get; set; }
+
+    Guid _idEscala;
+    int _versao;
+    bool _individuais = true, _consolidada = true, _relatorio = true, _gerando;
+
+    Escala? Escala => Dados.Escala(_idEscala);
+
+    static readonly (string, string, string, string)[] Opcoes =
+    [
+        ("individuais", "Planilha de cada funcionário", "Uma aba por pessoa: entrada, intervalo, saída e totais", "equipe"),
+        ("consolidada", "Planilha consolidada", "Calendário e lista da equipe com filtros", "planilha"),
+        ("relatorio", "Relatório de validação", "Regras verificadas, alertas aceitos e justificativas", "regras"),
+    ];
+
+    protected override void OnParametersSet()
+    {
+        var escala = (IdPedido is { } id ? Dados.Escala(id) : null)
+                     ?? Dados.EscalaDoDia(Loja.Hoje) ?? Dados.Escalas.MaxBy(e => e.Inicio);
+        _idEscala = escala?.Id ?? Guid.Empty;
+        _versao = VersaoPedida ?? (escala?.Rascunho is null ? escala?.Versoes.Count ?? 0 : 0);
+    }
+
+    void TrocarEscala(ChangeEventArgs e)
+    {
+        if (!Guid.TryParse(e.Value?.ToString(), out var id)) return;
+        _idEscala = id;
+        _versao = Escala?.Rascunho is null ? Escala?.Versoes.Count ?? 0 : 0;
+    }
+
+    bool Marcado(string campo) => campo switch { "individuais" => _individuais, "consolidada" => _consolidada, _ => _relatorio };
+
+    void Alternar(string campo)
+    {
+        switch (campo)
+        {
+            case "individuais": _individuais = !_individuais; break;
+            case "consolidada": _consolidada = !_consolidada; break;
+            default: _relatorio = !_relatorio; break;
+        }
+    }
+
+    async Task Gerar()
+    {
+        if (Escala is not { } escala) return;
+        _gerando = true;
+        StateHasChanged();
+        await Respirar();
+        try
+        {
+            var versao = _versao > 0 ? escala.Versoes[_versao - 1] : null;
+            var bytes = ExportacaoEscala.Gerar(Dados, escala, new OpcoesExportacao(_individuais, _consolidada, _relatorio), versao);
+            var resultado = await Navegador.EntregarArquivo(ExportacaoEscala.NomeArquivo(Dados, escala, versao), Navegador.TipoXlsx, bytes);
+            Loja.Avisar(resultado switch
+            {
+                "compartilhado" => "Planilha compartilhada.",
+                "baixado" => "Planilha baixada.",
+                _ => null,
+            });
+        }
+        catch (EscalaException e)
+        {
+            Loja.Avisar(e.Message, erro: true);
+        }
+        _gerando = false;
+    }
+}

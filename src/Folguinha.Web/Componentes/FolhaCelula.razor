@@ -1,0 +1,164 @@
+@using Folguinha.Domain.Regras
+@inherits PaginaBase
+@* Ajuste manual de um dia: turno, folga ou horário próprio, com revalidação imediata. *@
+
+<Folha Aberta="Funcionario is not null" Titulo="@Titulo" AoFechar="AoFechar">
+    @if (Funcionario is not null && Escala is not null)
+    {
+        var atual = Atual;
+        <p class="ajuda">
+            Agora: <strong>@Escalas.Descrever(Dados, atual)</strong>
+            @if (atual?.Travada == true)
+            {
+                <span> · ajuste manual</span>
+            }
+            · semana com @Formatos.Horas(HorasSemana) de @Formatos.Horas(Funcionario.CargaSemanal)
+        </p>
+
+        @if (Escala.Encerrada)
+        {
+            <p class="nota">Escala encerrada: não aceita mais ajustes.</p>
+        }
+        else
+        {
+            <fieldset>
+                <legend>Trocar para</legend>
+                <div class="acoes">
+                    @foreach (var t in Dados.Turnos)
+                    {
+                        var turno = t;
+                        var marcado = atual is { Trabalha: true } && atual.TurnoId == t.Id && atual.Inicio == t.Inicio && atual.Fim == t.Fim;
+                        <button type="button" class="botao pequeno @(marcado ? "primario" : "")" aria-pressed="@(marcado ? "true" : "false")" disabled="@_ocupado"
+                                @onclick="() => Aplicar(Alocacao.Trabalho(Funcionario.Id, Dia, turno.Inicio, turno.Fim, turno.Intervalo, turno.Id, FuncaoPara(turno)))">
+                            <span class="chip @Formatos.ClasseTurno(Dados, t.Id)" aria-hidden="true">@Formatos.Sigla(t.Nome)</span>
+                            @t.Nome @Formatos.Hora(t.Inicio)–@Formatos.Hora(t.Fim)
+                        </button>
+                    }
+                    <button type="button" class="botao pequeno @(atual is { Tipo: TipoAlocacao.Folga } ? "primario" : "")" disabled="@_ocupado"
+                            aria-pressed="@((atual is { Tipo: TipoAlocacao.Folga }) ? "true" : "false")"
+                            @onclick="() => Aplicar(Alocacao.Folga(Funcionario.Id, Dia))">
+                        <span class="chip cel-folga" aria-hidden="true">F</span> Folga
+                    </button>
+                </div>
+            </fieldset>
+
+            <details>
+                <summary class="botao texto pequeno" style="display: inline-flex;">Horário personalizado</summary>
+                <div class="grade-3" style="margin-top: .5rem;">
+                    <label class="campo">Entrada <input type="time" @bind="_inicio" /></label>
+                    <label class="campo">Saída <input type="time" @bind="_fim" /></label>
+                    <label class="campo">Intervalo (min) <input type="number" min="0" max="240" step="5" @bind="_intervalo" /></label>
+                </div>
+                <button type="button" class="botao pequeno" style="margin-top: .5rem;" disabled="@_ocupado"
+                        @onclick="() => Aplicar(Alocacao.Trabalho(Funcionario.Id, Dia, _inicio, _fim, TimeSpan.FromMinutes(Math.Clamp(_intervalo, 0, 240)), atual?.TurnoId ?? Dados.Turnos.FirstOrDefault()?.Id, atual?.FuncaoId))">
+                    Usar este horário
+                </button>
+            </details>
+
+            <a class="botao texto pequeno" href="@($"ocorrencias/nova?funcionario={Funcionario.Id}&data={Dia:yyyy-MM-dd}")">Registrar ausência ou folga extra</a>
+        }
+
+        @if (_ocupado)
+        {
+            <p class="ajuda" role="status">Validando…</p>
+        }
+        @if (_resultado is not null)
+        {
+            <div class="pilha" role="status" aria-live="polite">
+                @if (_resultado.Novas.Count == 0 && _resultado.Resolvidas.Count == 0)
+                {
+                    <p class="nota ok"><Icone Nome="ok" Tamanho="18" /> Ajuste salvo no rascunho, sem mudança nos avisos.</p>
+                }
+                @foreach (var v in _resultado.Resolvidas)
+                {
+                    <p class="nota ok"><Icone Nome="ok" Tamanho="18" /> Resolvido: @v.Mensagem</p>
+                }
+                @foreach (var v in _resultado.Novas)
+                {
+                    <AvisoRegra Violacao="v" />
+                }
+            </div>
+        }
+
+        @if (DoDia.Count > 0 && _resultado is null)
+        {
+            <h3>Avisos deste dia</h3>
+            @foreach (var v in DoDia)
+            {
+                <AvisoRegra Violacao="v" />
+            }
+        }
+    }
+</Folha>
+
+@code {
+    [Parameter] public Funcionario? Funcionario { get; set; }
+    [Parameter] public DateOnly Dia { get; set; }
+    [Parameter] public Escala? Escala { get; set; }
+    [Parameter] public IReadOnlyList<Violacao> Violacoes { get; set; } = [];
+    [Parameter] public EventCallback AoFechar { get; set; }
+    [Parameter] public EventCallback<IReadOnlyList<Violacao>> AoAjustar { get; set; }
+
+    ResultadoAjuste? _resultado;
+    bool _ocupado;
+    TimeOnly _inicio = new(8, 0), _fim = new(16, 0);
+    int _intervalo = 60;
+    (Guid, DateOnly)? _ultimo;
+
+    string Titulo => Funcionario is null ? "" : $"{Funcionario.Nome} · {Formatos.Dia(Dia)}";
+
+    Alocacao? Atual => Escala?.Atual.FirstOrDefault(a => a.FuncionarioId == Funcionario?.Id && a.Data == Dia);
+
+    List<Violacao> DoDia => [.. Violacoes.Where(v => v.FuncionarioId == Funcionario?.Id && v.Data == Dia)];
+
+    TimeSpan HorasSemana
+    {
+        get
+        {
+            var segunda = Formatos.Segunda(Dia);
+            return (Escala?.Atual ?? []).Where(a => a.FuncionarioId == Funcionario?.Id && a.Trabalha && a.Data >= segunda && a.Data <= segunda.AddDays(6))
+                .Aggregate(TimeSpan.Zero, (t, a) => t + a.HorasComputadas);
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Funcionario is null || _ultimo == (Funcionario.Id, Dia)) return;
+        _ultimo = (Funcionario.Id, Dia);
+        _resultado = null;
+        if (Atual is { Trabalha: true } a)
+        {
+            _inicio = a.Inicio;
+            _fim = a.Fim;
+            _intervalo = (int)a.Intervalo.TotalMinutes;
+        }
+    }
+
+    Guid? FuncaoPara(Turno turno)
+    {
+        // mantém a função atual; senão, a função que o turno exige nesse dia, se a pessoa tiver
+        if (Atual?.FuncaoId is { } atual) return atual;
+        var exigidas = Demanda.Aplicaveis(Dados.Demandas, Dia).Where(d => d.TurnoId == turno.Id && d.FuncaoId is not null).Select(d => d.FuncaoId!.Value);
+        return exigidas.FirstOrDefault(f => Funcionario!.TemFuncao(f)) is var f && f != Guid.Empty ? f : Funcionario!.Funcoes?.FirstOrDefault();
+    }
+
+    async Task Aplicar(Alocacao nova)
+    {
+        if (Escala is null) return;
+        _ocupado = true;
+        StateHasChanged();
+        await Respirar();
+        try
+        {
+            var r = Escalas.Ajustar(Dados, Escala.Id, nova);
+            await Loja.Substituir(r.Dados);
+            _resultado = r;
+            await AoAjustar.InvokeAsync(r.Violacoes);
+        }
+        catch (EscalaException e)
+        {
+            Loja.Avisar(e.Message, erro: true);
+        }
+        _ocupado = false;
+    }
+}

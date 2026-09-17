@@ -460,3 +460,6 @@ $RECYCLE.BIN/
 
 # Canvas gerado (reconstruir com docs/design/build-mockups.mjs)
 docs/design/folguinha-telas.html
+
+# Fotos dos testes de ponta a ponta
+artefatos/

@@ -1,0 +1,22 @@
+@using Folguinha.Domain.Regras
+@* Um aviso do validador: gravidade, pessoa/dia, explicação e sugestão. *@
+<article class="aviso">
+    <div class="linha entre">
+        <span class="chip @Formatos.ClasseSeveridade(Violacao.Severidade)">
+            <Icone Nome="alerta" Tamanho="14" Traco="2" /> @Formatos.Severidade(Violacao.Severidade)
+        </span>
+        @Acao
+    </div>
+    <p class="mensagem">@Violacao.Mensagem</p>
+    @if (!string.IsNullOrWhiteSpace(Violacao.Sugestao))
+    {
+        <p class="sugestao">@Violacao.Sugestao</p>
+    }
+    @ChildContent
+</article>
+
+@code {
+    [Parameter, EditorRequired] public Violacao Violacao { get; set; } = default!;
+    [Parameter] public RenderFragment? Acao { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

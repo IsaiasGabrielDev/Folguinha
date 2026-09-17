@@ -1,0 +1,36 @@
+@page "/sobre"
+@inherits PaginaBase
+
+<PageTitle>Sobre · Folguinha</PageTitle>
+
+<Cabecalho Titulo="Sobre o Folguinha" Voltar="mais" />
+
+<section class="cartao">
+    <h2>Limites</h2>
+    <p>O Folguinha ajuda a montar e validar escalas com base na CLT e nas regras que você configurar. Ele <strong>não substitui</strong> a análise do Departamento Pessoal, do contador ou da assessoria jurídica. Regras podem variar por categoria, localidade, convenção coletiva e tipo de contrato.</p>
+    <p>A escala planejada não comprova a jornada realizada; para isso vale o controle de ponto.</p>
+</section>
+
+<section class="cartao">
+    <h2>Privacidade</h2>
+    <ul>
+        <li>Nesta versão, os dados ficam somente neste aparelho (nenhum servidor recebe a escala).</li>
+        <li>Ocorrências guardam só o motivo administrativo. Não registre diagnósticos nem documentos médicos.</li>
+        <li>Escalas e planilhas mostram “ausência aprovada”, sem o motivo.</li>
+        <li>Remover uma pessoa apaga o cadastro e as ocorrências dela; versões publicadas mantêm só os dias, sem o nome.</li>
+        <li>A lista de feriados nacionais vem da BrasilAPI (brasilapi.com.br); só o ano é enviado.</li>
+    </ul>
+</section>
+
+<section class="cartao">
+    <h2>Regras verificadas</h2>
+    <ul>
+        <li>Jornada diária e semanal, hora extra e tempo parcial (CF art. 7º XIII; CLT arts. 58, 58-A, 59, 59-A)</li>
+        <li>Intervalo durante a jornada (art. 71) e descanso de 11h entre jornadas (art. 66)</li>
+        <li>Descanso semanal: no máximo 6 dias seguidos (art. 67; Lei 605/1949; OJ 410 TST)</li>
+        <li>Domingo de folga: 1 a cada 3 semanas no comércio, 7 nas demais (Lei 10.101/2000; Portaria MTP 671/2021)</li>
+        <li>Feriado trabalhado (Lei 605/1949 art. 9º), hora noturna (art. 73), menor de idade (art. 404)</li>
+        <li>Cobertura mínima, ausências aprovadas e preferências da equipe</li>
+    </ul>
+    <a href="regras">Ver e configurar as regras</a>
+</section>

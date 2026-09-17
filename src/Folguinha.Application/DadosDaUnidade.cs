@@ -49,9 +49,10 @@ public interface IArmazenamento
     ValueTask Remover(string chave);
 }
 
-public sealed class RepositorioDados(IArmazenamento armazenamento)
+/// `chave` separa conjuntos de dados no mesmo aparelho (o diagnóstico usa uma chave própria).
+public sealed class RepositorioDados(IArmazenamento armazenamento, string chave = "dados")
 {
-    const string Chave = "dados";
+    readonly string Chave = chave;
 
     public async ValueTask<DadosDaUnidade> Carregar() =>
         await armazenamento.Ler(Chave) is { } json ? DeBackup(json) ?? new() : new();

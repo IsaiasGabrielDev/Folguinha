@@ -1,0 +1,333 @@
+@page "/equipe/{Id}"
+@inherits PaginaBase
+
+<PageTitle>@(_novo ? "Nova pessoa" : _f.Nome) · Folguinha</PageTitle>
+
+@if (!_novo && Original is null)
+{
+    <Vazio Titulo="Pessoa não encontrada" Texto="Ela pode ter sido removida.">
+        <a class="botao" href="equipe">Voltar para a equipe</a>
+    </Vazio>
+    return;
+}
+
+<Cabecalho Titulo="@(_novo ? "Nova pessoa" : Original!.Nome)" Voltar="@Volta" />
+
+@if (!_novo && Original is { } pessoa)
+{
+    <ResumoFuncionario Funcionario="pessoa" />
+}
+
+<form class="pilha" @onsubmit="Salvar" @onsubmit:preventDefault>
+    <section class="cartao">
+        <h2>Dados</h2>
+        <label class="campo">Nome completo <input @bind="_f.Nome" required maxlength="80" autocomplete="off" /></label>
+        <div class="grade-2 responsiva">
+            <label class="campo">Matrícula <input @bind="_f.Matricula" maxlength="20" /></label>
+            <label class="campo">Cargo <input @bind="_f.Cargo" maxlength="40" /></label>
+            <label class="campo">Setor <input @bind="_f.Setor" maxlength="40" /></label>
+            <label class="campo">Contrato
+                <select @bind="_f.Contrato">
+                    @foreach (var c in Enum.GetValues<TipoContrato>())
+                    {
+                        <option value="@c">@Formatos.Contrato(c)</option>
+                    }
+                </select>
+            </label>
+        </div>
+        <label class="marcador"><input type="checkbox" @bind="_f.Menor" /> Menor de 18 anos (não trabalha entre 22h e 5h)</label>
+    </section>
+
+    <section class="cartao">
+        <h2>Jornada</h2>
+        <div class="grade-2 responsiva">
+            <label class="campo">Regime
+                <select value="@_f.Regime" @onchange="MudarRegime">
+                    @foreach (var r in Enum.GetValues<Regime>())
+                    {
+                        <option value="@r">@Formatos.Regime(r)</option>
+                    }
+                </select>
+            </label>
+            <label class="campo">Carga semanal (horas)
+                <input type="number" min="1" max="60" step="0.5" @bind="_f.Carga" />
+            </label>
+        </div>
+        <label class="marcador"><input type="checkbox" @bind="_f.HoraExtra" /> Pode fazer hora extra</label>
+        @if (_f.HoraExtra)
+        {
+            <label class="campo">Limite de horas extras por semana <input type="number" min="0" max="12" step="0.5" @bind="_f.LimiteExtra" /></label>
+        }
+        @if (Dados.Turnos.Count > 0)
+        {
+            <label class="campo">Turno principal
+                <select @bind="_f.TurnoPrincipal">
+                    <option value="">Sem preferência</option>
+                    @foreach (var t in Dados.Turnos)
+                    {
+                        <option value="@t.Id">@t.Nome (@Formatos.Hora(t.Inicio)–@Formatos.Hora(t.Fim))</option>
+                    }
+                </select>
+            </label>
+            <fieldset>
+                <legend>Turnos que pode fazer <span class="dica ajuda">(nenhum marcado = todos)</span></legend>
+                @foreach (var t in Dados.Turnos)
+                {
+                    var id = t.Id;
+                    <label class="marcador"><input type="checkbox" checked="@_f.Turnos.Contains(id)" @onchange="() => Alternar(_f.Turnos, id)" /> @t.Nome</label>
+                }
+            </fieldset>
+        }
+        @if (Dados.Funcoes.Count > 0)
+        {
+            <fieldset>
+                <legend>Funções</legend>
+                @foreach (var fn in Dados.Funcoes)
+                {
+                    var id = fn.Id;
+                    <label class="marcador"><input type="checkbox" checked="@_f.Funcoes.Contains(id)" @onchange="() => Alternar(_f.Funcoes, id)" /> @fn.Nome</label>
+                }
+            </fieldset>
+        }
+    </section>
+
+    <section class="cartao">
+        <h2>Disponibilidade</h2>
+        <p class="ajuda">Sem restrição = pode trabalhar qualquer dia e horário. Preferências o app tenta respeitar; as demais são obrigatórias.</p>
+        @foreach (var d in _f.Disponibilidades)
+        {
+            var disp = d;
+            <fieldset class="cartao compacto" style="box-shadow: none; border: 1.5px solid var(--linha);">
+                <legend class="sr-only">Restrição</legend>
+                <div class="grade-2">
+                    <label class="campo">Dia
+                        <select @bind="disp.Dia">
+                            @foreach (var dia in Formatos.Semana)
+                            {
+                                <option value="@dia">@Formatos.DiaSemana(dia)</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="campo">Tipo
+                        <select @bind="disp.Tipo">
+                            @foreach (var tipo in Enum.GetValues<TipoRestricao>())
+                            {
+                                <option value="@tipo">@Formatos.Restricao(tipo)</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <label class="marcador"><input type="checkbox" @bind="disp.NaoTrabalha" /> Não trabalha nesse dia</label>
+                @if (!disp.NaoTrabalha)
+                {
+                    <div class="grade-2">
+                        <label class="campo">Das <input type="time" @bind="disp.Inicio" /></label>
+                        <label class="campo">Até <input type="time" @bind="disp.Fim" /></label>
+                    </div>
+                }
+                @if (disp.Tipo == TipoRestricao.Temporaria)
+                {
+                    <label class="campo">Vale até <input type="date" @bind="disp.ValidaAte" /></label>
+                }
+                <button type="button" class="botao texto pequeno" style="align-self: flex-start;" @onclick="() => _f.Disponibilidades.Remove(disp)"><Icone Nome="lixo" Tamanho="16" /> Remover</button>
+            </fieldset>
+        }
+        <button type="button" class="botao" @onclick="() => _f.Disponibilidades.Add(new())"><Icone Nome="mais-um" Tamanho="18" /> Adicionar restrição</button>
+    </section>
+
+    <section class="cartao" id="situacao">
+        <h2>Como a pessoa chega na primeira escala</h2>
+        <p class="ajuda">Usado enquanto o app ainda não tem escalas dela: assim a próxima folga respeita os dias que ela já trabalhou.</p>
+        <div class="grade-2 responsiva">
+            <label class="campo">Última folga <input type="date" @bind="_f.UltimaFolga" /></label>
+            <label class="campo">Último domingo de folga <span class="dica">Opcional</span> <input type="date" @bind="_f.UltimoDomingo" /></label>
+        </div>
+        <label class="campo">Trabalhou no último feriado?
+            <select @bind="_f.TrabalhouFeriado">
+                <option value="">Não sei</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Não</option>
+            </select>
+        </label>
+        @if (_f.UltimoDomingo is { } dom && dom.DayOfWeek != DayOfWeek.Sunday)
+        {
+            <p class="nota alerta">A data do último domingo de folga não é um domingo.</p>
+        }
+    </section>
+
+    <section class="cartao">
+        <h2>Folga extra</h2>
+        <label class="linha fixa" style="gap: .75rem; cursor: pointer;">
+            <span class="cresce">Tem folga além do regime<br /><span class="ajuda pequeno">Ex.: 6x1 com uma folga a mais a cada 2 semanas.</span></span>
+            <input class="interruptor" type="checkbox" @bind="_f.TemFolgaExtra" />
+        </label>
+        @if (_f.TemFolgaExtra)
+        {
+            <div class="grade-2 responsiva">
+                <label class="campo">A cada quantas semanas <input type="number" min="1" max="8" @bind="_f.ExtraSemanas" /></label>
+                <label class="campo">Folgas a mais <input type="number" min="1" max="3" @bind="_f.ExtraQuantidade" /></label>
+                <label class="campo">A partir da semana de <input type="date" @bind="_f.ExtraInicio" /></label>
+                <label class="campo">Onde cai
+                    <select @bind="_f.ExtraPosicao">
+                        @foreach (var p in Enum.GetValues<PosicaoFolgaExtra>())
+                        {
+                            <option value="@p">@Formatos.Posicao(p)</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <button type="button" class="botao" @onclick="AplicarATodos">Aplicar esta folga extra a toda a equipe</button>
+        }
+        <p class="ajuda pequeno">Folga extra numa data específica: registre em Ocorrências → “Folga extra”.</p>
+    </section>
+
+    <div class="acoes">
+        @if (!_novo)
+        {
+            <button type="button" class="botao perigo" @onclick="() => _confirmarRemocao = true"><Icone Nome="lixo" Tamanho="18" /> Remover</button>
+        }
+        <button type="submit" class="botao primario" disabled="@string.IsNullOrWhiteSpace(_f.Nome)">Salvar</button>
+    </div>
+</form>
+
+<Folha Aberta="_confirmarRemocao" Titulo="Remover pessoa?" AoFechar="() => _confirmarRemocao = false">
+    <p>Os dados de @_f.Nome e as ocorrências dela saem deste aparelho. Escalas já publicadas mantêm os dias, sem o nome.</p>
+    <div class="acoes">
+        <button type="button" class="botao" @onclick="() => _confirmarRemocao = false">Cancelar</button>
+        <button type="button" class="botao primario" @onclick="Remover">Remover</button>
+    </div>
+</Folha>
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+    [SupplyParameterFromQuery(Name = "volta")] public string? VoltaPara { get; set; }
+
+    sealed class DispEdicao
+    {
+        public DayOfWeek Dia { get; set; } = DayOfWeek.Sunday;
+        public TipoRestricao Tipo { get; set; } = TipoRestricao.Contratual;
+        public bool NaoTrabalha { get; set; } = true;
+        public TimeOnly Inicio { get; set; } = new(8, 0);
+        public TimeOnly Fim { get; set; } = new(18, 0);
+        public DateOnly? ValidaAte { get; set; }
+    }
+
+    sealed class Edicao
+    {
+        public string Nome { get; set; } = "";
+        public string? Matricula { get; set; }
+        public string? Cargo { get; set; }
+        public string? Setor { get; set; }
+        public TipoContrato Contrato { get; set; } = TipoContrato.Clt;
+        public bool Menor { get; set; }
+        public Regime Regime { get; set; } = Regime.SeisPorUm;
+        public double Carga { get; set; } = 44;
+        public bool HoraExtra { get; set; }
+        public double LimiteExtra { get; set; } = 2;
+        public Guid? TurnoPrincipal { get; set; }
+        public List<Guid> Turnos { get; set; } = [];
+        public List<Guid> Funcoes { get; set; } = [];
+        public List<DispEdicao> Disponibilidades { get; set; } = [];
+        public DateOnly? UltimaFolga { get; set; }
+        public DateOnly? UltimoDomingo { get; set; }
+        public string TrabalhouFeriado { get; set; } = "";
+        public bool TemFolgaExtra { get; set; }
+        public int ExtraSemanas { get; set; } = 2;
+        public int ExtraQuantidade { get; set; } = 1;
+        public DateOnly ExtraInicio { get; set; } = Formatos.Segunda(Loja.Hoje);
+        public PosicaoFolgaExtra ExtraPosicao { get; set; }
+    }
+
+    Edicao _f = new();
+    bool _novo, _confirmarRemocao;
+    Guid _id;
+
+    Funcionario? Original => Dados.Funcionario(_id);
+
+    string Volta => VoltaPara is { Length: > 0 } v && !v.Contains("//", StringComparison.Ordinal) ? v : "equipe";
+
+    protected override void OnParametersSet()
+    {
+        _novo = Id == "novo";
+        _id = _novo ? Guid.NewGuid() : Guid.TryParse(Id, out var g) ? g : Guid.Empty;
+        if (Original is { } f) _f = Carregar(f);
+    }
+
+    static Edicao Carregar(Funcionario f) => new()
+    {
+        Nome = f.Nome, Matricula = f.Matricula, Cargo = f.Cargo, Setor = f.Setor, Contrato = f.Contrato, Menor = f.MenorDeIdade,
+        Regime = f.Regime, Carga = Math.Round(f.CargaSemanal.TotalHours, 2), HoraExtra = f.PermiteHoraExtra,
+        LimiteExtra = f.LimiteHoraExtraSemanal.TotalHours, TurnoPrincipal = f.TurnoPrincipal,
+        Turnos = [.. f.Turnos ?? []], Funcoes = [.. f.Funcoes ?? []],
+        Disponibilidades = [.. (f.Disponibilidades ?? []).Select(d => new DispEdicao
+        {
+            Dia = d.Dia, Tipo = d.Tipo, NaoTrabalha = d.Inicio is null, Inicio = d.Inicio ?? new(8, 0), Fim = d.Fim ?? new(18, 0), ValidaAte = d.ValidaAte,
+        })],
+        UltimaFolga = f.Situacao?.UltimaFolga, UltimoDomingo = f.Situacao?.UltimoDomingoDeFolga,
+        TrabalhouFeriado = f.Situacao?.TrabalhouUltimoFeriado switch { true => "sim", false => "nao", _ => "" },
+        TemFolgaExtra = f.FolgaExtra is not null,
+        ExtraSemanas = f.FolgaExtra?.ACadaSemanas ?? 2, ExtraQuantidade = f.FolgaExtra?.Quantidade ?? 1,
+        ExtraInicio = f.FolgaExtra?.APartirDe ?? Formatos.Segunda(Loja.Hoje), ExtraPosicao = f.FolgaExtra?.Posicao ?? PosicaoFolgaExtra.Livre,
+    };
+
+    void MudarRegime(ChangeEventArgs e)
+    {
+        if (!Enum.TryParse<Regime>(e.Value?.ToString(), out var r)) return;
+        _f.Regime = r;
+        _f.Carga = r switch { Regime.DozePorTrintaESeis => 36, _ => _f.Carga };
+    }
+
+    static void Alternar(List<Guid> lista, Guid id)
+    {
+        if (!lista.Remove(id)) lista.Add(id);
+    }
+
+    FolgaExtraPeriodica? FolgaExtra() => _f.TemFolgaExtra
+        ? new FolgaExtraPeriodica(Math.Clamp(_f.ExtraSemanas, 1, 8), _f.ExtraInicio, Math.Clamp(_f.ExtraQuantidade, 1, 3), _f.ExtraPosicao)
+        : null;
+
+    Funcionario Montar() => new(_id, _f.Nome.Trim(), _f.Regime, TimeSpan.FromHours(Math.Clamp(_f.Carga, 1, 60)), _f.Contrato, _f.Menor,
+        _f.HoraExtra, TimeSpan.FromHours(_f.HoraExtra ? Math.Clamp(_f.LimiteExtra, 0, 12) : 0))
+    {
+        Matricula = Limpo(_f.Matricula), Cargo = Limpo(_f.Cargo), Setor = Limpo(_f.Setor),
+        TurnoPrincipal = _f.TurnoPrincipal,
+        Turnos = _f.Turnos.Count > 0 ? [.. _f.Turnos] : null,
+        Funcoes = _f.Funcoes.Count > 0 ? [.. _f.Funcoes] : null,
+        Disponibilidades = _f.Disponibilidades.Count > 0
+            ? [.. _f.Disponibilidades.Select(d => new Disponibilidade(d.Dia, d.NaoTrabalha ? null : d.Inicio, d.NaoTrabalha ? null : d.Fim,
+                d.Tipo, d.Tipo == TipoRestricao.Temporaria ? d.ValidaAte : null))]
+            : null,
+        Situacao = _f.UltimaFolga is { } u
+            ? new SituacaoInicial(u, _f.UltimoDomingo, _f.TrabalhouFeriado switch { "sim" => true, "nao" => false, _ => null })
+            : null,
+        FolgaExtra = FolgaExtra(),
+    };
+
+    static string? Limpo(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    async Task Salvar()
+    {
+        if (string.IsNullOrWhiteSpace(_f.Nome)) return;
+        var novo = Montar();
+        if (await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios.Where(x => x.Id != novo.Id), novo] }, $"{novo.Nome} salvo(a)."))
+            Nav.NavigateTo(Volta);
+    }
+
+    async Task AplicarATodos()
+    {
+        var extra = FolgaExtra();
+        await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios.Select(x => x with { FolgaExtra = extra })] },
+            "Folga extra aplicada a toda a equipe.");
+    }
+
+    async Task Remover()
+    {
+        _confirmarRemocao = false;
+        if (await Loja.Alterar(d => d with
+            {
+                Funcionarios = [.. d.Funcionarios.Where(x => x.Id != _id)],
+                Ocorrencias = [.. d.Ocorrencias.Where(o => o.FuncionarioId != _id)],
+            }, "Pessoa removida."))
+            Nav.NavigateTo("equipe");
+    }
+}

@@ -1,0 +1,111 @@
+@page "/backup"
+@inherits PaginaBase
+@inject Navegador Navegador
+
+<PageTitle>Backup · Folguinha</PageTitle>
+
+<Cabecalho Titulo="Backup e dados" Voltar="@(Dados.Empresa is null ? "inicio" : "mais")" />
+
+<section class="cartao">
+    <h2>Neste aparelho</h2>
+    <dl class="diagnostico" style="display: grid; grid-template-columns: auto 1fr; gap: .25rem 1rem; margin: 0;">
+        <dt>Armazenamento</dt><dd>@_persistencia</dd>
+        <dt>Instalado</dt><dd>@(_instalado ? "sim" : "não — instale para proteger os dados")</dd>
+        <dt>Espaço usado</dt><dd>@(_kb < 0 ? "—" : $"{_kb} KB")</dd>
+        <dt>Conteúdo</dt><dd>@Dados.Funcionarios.Count pessoas · @Dados.Escalas.Count escalas · @Dados.Ocorrencias.Count ocorrências</dd>
+    </dl>
+    @if (!_instalado)
+    {
+        <p class="nota alerta">
+            <Icone Nome="info" Tamanho="18" />
+            <span>No iPhone: Safari → Compartilhar → <strong>Adicionar à Tela de Início</strong>. No Android: Chrome → menu → <strong>Instalar app</strong>. Sem instalar, o Safari pode apagar os dados após 7 dias sem uso.</span>
+        </p>
+    }
+</section>
+
+<section class="cartao">
+    <h2>Cópia de segurança</h2>
+    <p class="ajuda">Um arquivo com todos os dados. Guarde em lugar seguro: ele contém nomes da equipe.</p>
+    <button class="botao primario" disabled="@(Dados.Empresa is null)" @onclick="Exportar"><Icone Nome="backup" Tamanho="18" /> Exportar backup</button>
+    <label class="botao">
+        <Icone Nome="atualizar" Tamanho="18" /> Importar backup
+        <InputFile class="oculto" OnChange="Escolher" accept=".json,application/json" />
+    </label>
+</section>
+
+<section class="cartao">
+    <h2>Apagar</h2>
+    <p class="ajuda">Remove todos os dados do Folguinha deste aparelho. Exporte um backup antes.</p>
+    <button class="botao perigo" @onclick="() => _confirmar = true"><Icone Nome="lixo" Tamanho="18" /> Apagar tudo</button>
+</section>
+
+<Folha Aberta="_importado is not null" Titulo="Substituir os dados?" AoFechar="() => _importado = null">
+    <p>O backup de <strong>@_importado?.Empresa?.Nome</strong> (@_importado?.Funcionarios.Count pessoas, @_importado?.Escalas.Count escalas) vai substituir tudo o que está neste aparelho.</p>
+    <div class="acoes">
+        <button class="botao" @onclick="() => _importado = null">Cancelar</button>
+        <button class="botao primario" @onclick="Importar">Substituir</button>
+    </div>
+</Folha>
+
+<Folha Aberta="_confirmar" Titulo="Apagar tudo?" AoFechar="() => _confirmar = false">
+    <p>Essa ação não pode ser desfeita.</p>
+    <div class="acoes">
+        <button class="botao" @onclick="() => _confirmar = false">Cancelar</button>
+        <button class="botao primario" @onclick="Apagar">Apagar</button>
+    </div>
+</Folha>
+
+@code {
+    string _persistencia = "…";
+    bool _instalado, _confirmar;
+    int _kb = -1;
+    DadosDaUnidade? _importado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _persistencia = await Navegador.PedirPersistencia() switch
+        {
+            "persistente" => "protegido (o navegador não apaga sozinho)",
+            "temporario" => "temporário",
+            _ => "sem garantia do navegador",
+        };
+        _instalado = await Navegador.Instalado();
+        _kb = await Navegador.EspacoUsadoKb();
+    }
+
+    async Task Exportar()
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(RepositorioDados.ParaBackup(Dados));
+        var r = await Navegador.EntregarArquivo($"folguinha-backup-{DateTime.Now:yyyy-MM-dd}.json", "application/json", bytes);
+        if (r != "cancelado") Loja.Avisar("Backup gerado.");
+    }
+
+    async Task Escolher(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var leitor = new StreamReader(e.File.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024));
+            _importado = RepositorioDados.DeBackup(await leitor.ReadToEndAsync());
+            if (_importado is null) Loja.Avisar("Esse arquivo não é um backup do Folguinha.", erro: true);
+        }
+        catch (IOException)
+        {
+            Loja.Avisar("Arquivo grande demais para um backup do Folguinha.", erro: true);
+        }
+    }
+
+    async Task Importar()
+    {
+        if (_importado is null) return;
+        await Loja.Substituir(_importado, "Backup importado.");
+        _importado = null;
+        Nav.NavigateTo("");
+    }
+
+    async Task Apagar()
+    {
+        _confirmar = false;
+        await Loja.Apagar();
+        Nav.NavigateTo("inicio");
+    }
+}

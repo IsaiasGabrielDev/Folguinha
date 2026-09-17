@@ -1,0 +1,83 @@
+@page "/equipe"
+@inherits PaginaBase
+
+<PageTitle>Equipe · Folguinha</PageTitle>
+
+<Cabecalho Titulo="Equipe" Subtitulo="@($"{Dados.Funcionarios.Count} pessoas")">
+    <Acoes>
+        <a class="botao primario pequeno" href="equipe/novo"><Icone Nome="mais-um" Tamanho="18" Traco="2.2" /> Adicionar</a>
+    </Acoes>
+</Cabecalho>
+
+@if (Dados.Funcionarios.Count == 0)
+{
+    <Vazio Icone="equipe" Titulo="Ninguém cadastrado ainda" Texto="Cadastre quem trabalha na loja para montar a escala.">
+        <a class="botao primario" href="equipe/novo">Adicionar pessoa</a>
+    </Vazio>
+}
+else
+{
+    <label class="campo">
+        <span class="sr-only">Buscar</span>
+        <input type="search" placeholder="Buscar por nome, setor ou função" @bind="_busca" @bind:event="oninput" />
+    </label>
+
+    @if (SemSituacao.Count > 0)
+    {
+        <p class="nota alerta">
+            <Icone Nome="info" Tamanho="18" />
+            <span>@SemSituacao.Count pessoa(s) sem a data da última folga. Informe para a primeira escala respeitar os dias já trabalhados.</span>
+        </p>
+    }
+
+    <div class="cartao compacto">
+        <ul class="lista">
+            @foreach (var f in Filtrados)
+            {
+                <li>
+                    <a class="item cobre" href="@($"equipe/{f.Id}")">
+                        <span class="avatar @Formatos.ClasseAvatar(f.Id)" aria-hidden="true">@Formatos.Iniciais(f.Nome)</span>
+                        <span class="cresce">
+                            <span class="nome" style="display: block;">@f.Nome</span>
+                            <span class="detalhe">@Detalhe(f)</span>
+                        </span>
+                        @if (Precisa(f))
+                        {
+                            <span class="chip sev-atencao">Falta última folga</span>
+                        }
+                        <Icone Nome="direita" Tamanho="18" />
+                    </a>
+                </li>
+            }
+        </ul>
+        @if (!Filtrados.Any())
+        {
+            <p class="ajuda">Ninguém encontrado com “@_busca”.</p>
+        }
+    </div>
+}
+
+@code {
+    string _busca = "";
+
+    IEnumerable<Funcionario> Filtrados => Dados.Funcionarios
+        .Where(f => string.IsNullOrWhiteSpace(_busca)
+                    || $"{f.Nome} {f.Setor} {f.Cargo} {Funcoes(f)}".Contains(_busca.Trim(), StringComparison.CurrentCultureIgnoreCase))
+        .OrderBy(f => f.Nome, StringComparer.CurrentCulture);
+
+    List<Funcionario> SemSituacao => [.. Dados.Funcionarios.Where(Precisa)];
+
+    bool Precisa(Funcionario f) => f.Situacao is null && !Dados.Escalas.Any(e => e.Atual.Any(a => a.FuncionarioId == f.Id));
+
+    string Funcoes(Funcionario f) =>
+        string.Join(", ", (f.Funcoes ?? []).Select(id => Dados.Funcoes.FirstOrDefault(x => x.Id == id)?.Nome).OfType<string>());
+
+    string Detalhe(Funcionario f) => string.Join(" · ", new[]
+    {
+        Formatos.Regime(f.Regime),
+        $"{Formatos.Horas(f.CargaSemanal)}/sem",
+        Funcoes(f),
+        f.Setor,
+        f.FolgaExtra is not null ? "folga extra" : null,
+    }.Where(x => !string.IsNullOrWhiteSpace(x)));
+}

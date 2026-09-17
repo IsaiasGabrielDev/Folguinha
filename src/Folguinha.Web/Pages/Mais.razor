@@ -1,0 +1,58 @@
+@page "/mais"
+@inherits PaginaBase
+
+<PageTitle>Mais · Folguinha</PageTitle>
+
+<Cabecalho Titulo="Mais" Subtitulo="@Dados.Empresa?.Nome" />
+
+@foreach (var (titulo, itens) in Grupos)
+{
+    <section class="pilha" style="gap: .5rem;">
+        <h2>@titulo</h2>
+        <div class="cartao compacto">
+            <ul class="lista">
+                @foreach (var (icone, nome, detalhe, link) in itens)
+                {
+                    <li>
+                        <a class="item cobre" href="@link">
+                            <span class="avatar avatar-0" style="border-radius: 14px;" aria-hidden="true"><Icone Nome="@icone" Tamanho="20" /></span>
+                            <span class="cresce">
+                                <span class="nome" style="display: block;">@nome</span>
+                                <span class="detalhe">@detalhe</span>
+                            </span>
+                            <Icone Nome="direita" Tamanho="18" />
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </section>
+}
+
+<p class="ajuda pequeno" style="text-align: center;">Folguinha beta · dados guardados só neste aparelho</p>
+
+@code {
+    IEnumerable<(string, (string, string, string, string)[])> Grupos =>
+    [
+        ("Escalas",
+        [
+            ("planilha", "Exportar planilhas", "Individual, consolidada e relatório de validação", "exportar"),
+            ("historico", "Histórico de versões", "O que mudou em cada publicação", "historico"),
+            ("feriado", "Feriados", $"{Dados.Feriados.Count(f => f.Considerado)} considerados · rodízio {(Dados.RodizioFeriados ? "ligado" : "desligado")}", "configuracoes/feriados"),
+            ("regras", "Regras", "Níveis e vigência das validações", "regras"),
+        ]),
+        ("Cadastro",
+        [
+            ("loja", "Empresa", Dados.Empresa?.Nome ?? "", "configuracoes/empresa"),
+            ("relogio", "Horário de funcionamento", $"{Dados.Funcionamento.Select(p => p.Dia).Distinct().Count()} dias por semana", "configuracoes/funcionamento"),
+            ("escala", "Turnos e funções", $"{Dados.Turnos.Count} turnos · {Dados.Funcoes.Count} funções", "configuracoes/turnos"),
+            ("equipe", "Pessoas por turno", "Mínimo e ideal por dia", "configuracoes/demanda"),
+        ]),
+        ("Aparelho",
+        [
+            ("backup", "Backup e dados", "Exportar, importar ou apagar", "backup"),
+            ("info", "Sobre e aviso legal", "Limites do app e privacidade", "sobre"),
+            ("diagnostico", "Diagnóstico", "Teste de armazenamento e planilha", "diagnostico"),
+        ]),
+    ];
+}

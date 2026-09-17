@@ -1,0 +1,282 @@
+@page "/ocorrencias/nova"
+@using Folguinha.Domain.Regras
+@using Folguinha.Domain.Remanejo
+@inherits PaginaBase
+
+<PageTitle>Nova ocorrência · Folguinha</PageTitle>
+
+<Cabecalho Titulo="@(_etapa == 0 ? "Nova ocorrência" : "Remanejar")" Voltar="ocorrencias" />
+
+<div class="etapas" aria-label="Etapas">
+    @foreach (var (nome, i) in new[] { "Registro", "Substitutos", "Impacto", "Aprovar" }.Select((n, i) => (n, i)))
+    {
+        <div class="@(i < _etapa ? "feita" : i == _etapa ? "atual" : "")" aria-current="@(i == _etapa ? "step" : null)">@nome</div>
+    }
+</div>
+
+@if (Dados.Funcionarios.Count == 0)
+{
+    <Vazio Icone="equipe" Titulo="Cadastre a equipe primeiro"><a class="botao" href="equipe/novo">Adicionar pessoa</a></Vazio>
+    return;
+}
+
+@switch (_etapa)
+{
+    case 0:
+        <form class="cartao" @onsubmit="Registrar" @onsubmit:preventDefault>
+            <label class="campo">Quem
+                <select @bind="_funcionarioId" required>
+                    <option value="@Guid.Empty">Escolha…</option>
+                    @foreach (var f in Dados.Funcionarios.OrderBy(f => f.Nome))
+                    {
+                        <option value="@f.Id">@f.Nome</option>
+                    }
+                </select>
+            </label>
+            <label class="campo">Tipo
+                <select @bind="_tipo">
+                    @foreach (var t in Enum.GetValues<TipoOcorrencia>())
+                    {
+                        <option value="@t">@Ocorrencias.Nome(t)</option>
+                    }
+                </select>
+                <span class="dica">@DicaTipo</span>
+            </label>
+            <div class="grade-2">
+                <label class="campo">De <input type="date" @bind="_inicio" required /></label>
+                <label class="campo">Até <input type="date" @bind="_fim" min="@_inicio.ToString("yyyy-MM-dd")" required /></label>
+            </div>
+            <label class="campo">Observação administrativa <span class="dica">Opcional. Não informe diagnóstico nem dados de saúde.</span>
+                <input @bind="_observacao" maxlength="120" />
+            </label>
+            <button type="submit" class="botao primario" disabled="@(_funcionarioId == Guid.Empty || _fim < _inicio || _calculando)">
+                @(_calculando ? "Verificando a escala…" : "Continuar")
+            </button>
+        </form>
+        break;
+
+    case 1:
+        <section class="cartao">
+            <div class="linha">
+                <span class="avatar @Formatos.ClasseAvatar(_funcionarioId)" aria-hidden="true">@Formatos.Iniciais(Pessoa?.Nome ?? "?")</span>
+                <div class="cresce">
+                    <p class="nome"><strong>@Pessoa?.Nome</strong></p>
+                    <p class="ajuda pequeno">@Ocorrencias.Nome(_tipo) · @Formatos.Dia(_inicio)@(_fim != _inicio ? $" a {Formatos.Dia(_fim)}" : "")</p>
+                </div>
+            </div>
+            @if (_afetados.Count == 0)
+            {
+                <p class="nota">Nenhum turno de trabalho é afetado. A ocorrência será só registrada.</p>
+            }
+        </section>
+
+        @foreach (var afetado in _afetados)
+        {
+            var a = afetado;
+            var escolhido = _escolhas.GetValueOrDefault(a.Turno.Data);
+            <section class="cartao">
+                <div class="linha entre">
+                    <h2>@Formatos.Dia(a.Turno.Data) · @Escalas.Descrever(Dados, a.Turno)</h2>
+                    <span class="chip @(escolhido is null ? "sev-atencao" : "chip-verde")">@(escolhido?.Funcionario.Nome ?? "Sem substituto")</span>
+                </div>
+                @if (!_opcoes.TryGetValue(a.Turno.Data, out var opcoes))
+                {
+                    <button class="botao" disabled="@_calculando" @onclick="() => Buscar(a)">@(_calculando ? "Procurando…" : "Ver quem pode cobrir")</button>
+                }
+                else
+                {
+                    <fieldset>
+                        <legend class="sr-only">Substituto para @Formatos.Dia(a.Turno.Data)</legend>
+                        <label class="marcador"><input type="radio" name="@($"sub-{a.Turno.Data}")" checked="@(escolhido is null)" @onchange="() => _escolhas.Remove(a.Turno.Data)" /> Deixar sem substituto</label>
+                        @if (opcoes.Count == 0)
+                        {
+                            <p class="ajuda">Ninguém de folga nesse dia pode assumir esse turno.</p>
+                        }
+                        @foreach (var s in opcoes)
+                        {
+                            var sub = s;
+                            <label class="marcador" style="align-items: flex-start; opacity: @(s.Elegivel ? "1" : ".6");">
+                                <input type="radio" name="@($"sub-{a.Turno.Data}")" disabled="@(!s.Elegivel)" checked="@(escolhido == s)"
+                                       @onchange="() => _escolhas[a.Turno.Data] = sub" />
+                                <span class="cresce">
+                                    <strong>@s.Funcionario.Nome</strong>
+                                    @if (s == opcoes.FirstOrDefault(x => x.Elegivel))
+                                    {
+                                        <span class="chip chip-verde">Melhor opção</span>
+                                    }
+                                    <br /><span class="ajuda pequeno">@s.Resumo</span>
+                                </span>
+                            </label>
+                        }
+                    </fieldset>
+                }
+            </section>
+        }
+
+        <div class="acoes">
+            <button class="botao" @onclick="() => _etapa = 0">Voltar</button>
+            <button class="botao primario" disabled="@_calculando" @onclick="Simular">@(_calculando ? "Calculando…" : "Ver impacto")</button>
+        </div>
+        break;
+
+    default:
+        <section class="cartao">
+            <h2>Impacto</h2>
+            <div class="grade-3">
+                <div class="estatistica"><strong>@Math.Round(_impacto?.Cobertura * 100 ?? 100)%</strong><span>cobertura nos dias</span></div>
+                <div class="estatistica"><strong>@Formatos.Horas(_impacto?.HorasExtras ?? TimeSpan.Zero)</strong><span>horas extras</span></div>
+                <div class="estatistica"><strong>@(_impacto?.Afetados.Count ?? 1)</strong><span>@((_impacto?.Afetados.Count ?? 1) == 1 ? "pessoa afetada" : "pessoas afetadas")</span></div>
+            </div>
+            <p class="ajuda pequeno">@string.Join(", ", (_impacto?.Afetados ?? []).Select(id => Dados.Funcionario(id)?.Nome).OfType<string>())</p>
+            @if (Publicadas)
+            {
+                <p class="nota"><Icone Nome="info" Tamanho="18" /><span>A escala já publicada ganha uma nova versão. O motivo registrado não revela o tipo de ausência.</span></p>
+            }
+        </section>
+
+        @foreach (var v in _novos.Where(v => v.Severidade == Severidade.Bloqueio))
+        {
+            <AvisoRegra Violacao="v" />
+        }
+        @if (Publicadas)
+        {
+            @foreach (var v in _novos.Where(Escalas.PrecisaJustificativa))
+            {
+                var chave = Escalas.Chave(v);
+                <AvisoRegra Violacao="v">
+                    <label class="campo">Justificativa
+                        <input value="@_justificativas.GetValueOrDefault(chave)" @onchange="e => _justificativas[chave] = e.Value?.ToString() ?? string.Empty" maxlength="200" />
+                    </label>
+                </AvisoRegra>
+            }
+        }
+        else
+        {
+            @foreach (var v in _novos.Where(Escalas.PrecisaJustificativa))
+            {
+                <AvisoRegra Violacao="v" />
+            }
+        }
+        @if (_pendencias.Count > 0)
+        {
+            <p class="nota erro" role="alert">A ocorrência foi registrada, mas a nova versão não foi publicada: @_pendencias.Count pendência(s). Resolva na tela da escala e publique.</p>
+            <a class="botao primario" href="escala">Abrir escala</a>
+        }
+        else
+        {
+            <div class="acoes">
+                <button class="botao" @onclick="() => _etapa = 1">Voltar</button>
+                <button class="botao primario" disabled="@_calculando" @onclick="Aprovar">@(_calculando ? "Aprovando…" : "Aprovar")</button>
+            </div>
+        }
+        break;
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "funcionario")] public Guid? FuncionarioPedido { get; set; }
+    [SupplyParameterFromQuery(Name = "data")] public string? DataPedida { get; set; }
+
+    int _etapa;
+    Guid _funcionarioId;
+    TipoOcorrencia _tipo = TipoOcorrencia.Atestado;
+    DateOnly _inicio = Loja.Hoje, _fim = Loja.Hoje;
+    string _observacao = "";
+    bool _calculando;
+    Ocorrencia? _ocorrencia;
+    List<TurnoAfetado> _afetados = [];
+    readonly Dictionary<DateOnly, IReadOnlyList<Substituto>> _opcoes = [];
+    readonly Dictionary<DateOnly, Substituto> _escolhas = [];
+    readonly Dictionary<string, string> _justificativas = [];
+    Impacto? _impacto;
+    List<Violacao> _novos = [];
+    List<Violacao> _pendencias = [];
+
+    Funcionario? Pessoa => Dados.Funcionario(_funcionarioId);
+
+    bool Publicadas => _afetados.Select(a => Dados.Escala(a.EscalaId)).Any(e => e?.Versoes.Count > 0);
+
+    string DicaTipo => _tipo switch
+    {
+        TipoOcorrencia.FolgaExtra => "Vira folga na escala, além da folga normal da semana.",
+        _ when new Ocorrencia(Guid.Empty, Guid.Empty, _tipo, _inicio, _fim).Afasta => "A pessoa sai da escala nesses dias.",
+        _ => "Só fica registrada; a escala não muda.",
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (FuncionarioPedido is { } f && _funcionarioId == Guid.Empty) _funcionarioId = f;
+        if (DateOnly.TryParse(DataPedida, out var d) && _etapa == 0) _inicio = _fim = d;
+    }
+
+    async Task Registrar()
+    {
+        if (_funcionarioId == Guid.Empty || _fim < _inicio) return;
+        _calculando = true;
+        StateHasChanged();
+        await Respirar();
+        _ocorrencia = new Ocorrencia(_ocorrencia?.Id ?? Guid.NewGuid(), _funcionarioId, _tipo, _inicio, _fim,
+            string.IsNullOrWhiteSpace(_observacao) ? null : _observacao.Trim());
+        _afetados = [.. Ocorrencias.TurnosAfetados(Dados, _ocorrencia)];
+        _opcoes.Clear();
+        _escolhas.Clear();
+        _calculando = false;
+        _etapa = 1;
+        // com um só dia afetado, já mostra as opções
+        if (_afetados.Count == 1) await Buscar(_afetados[0]);
+    }
+
+    async Task Buscar(TurnoAfetado a)
+    {
+        if (_ocorrencia is null) return;
+        _calculando = true;
+        StateHasChanged();
+        await Respirar();
+        _opcoes[a.Turno.Data] = Ocorrencias.Substitutos(Dados, _ocorrencia, a);
+        _calculando = false;
+    }
+
+    async Task Simular()
+    {
+        if (_ocorrencia is null) return;
+        _calculando = true;
+        StateHasChanged();
+        await Respirar();
+        var escolhidos = _escolhas.Values.ToList();
+        var simulacoes = Ocorrencias.Simular(Dados, _ocorrencia, escolhidos);
+        var antes = simulacoes.SelectMany(s => Escalas.Validar(Dados, s.Escala)).Select(Escalas.Chave).ToHashSet();
+        _novos = [.. simulacoes.SelectMany(s => s.Resultado.Violacoes).Where(v => !antes.Contains(Escalas.Chave(v)) && v.Severidade != Severidade.Informativo)];
+        _impacto = simulacoes.Count == 0
+            ? new Impacto(1, TimeSpan.Zero, [_funcionarioId])
+            : new Impacto(simulacoes.Average(s => s.Resultado.Impacto.Cobertura),
+                simulacoes.Aggregate(TimeSpan.Zero, (t, s) => t + s.Resultado.Impacto.HorasExtras),
+                [.. simulacoes.SelectMany(s => s.Resultado.Impacto.Afetados).Distinct()]);
+        // alertas antigos já tinham sido justificados na publicação anterior; reaproveita
+        foreach (var e in simulacoes.Select(s => s.Escala))
+            foreach (var aceito in e.UltimaVersao?.AlertasAceitos ?? [])
+                foreach (var v in simulacoes.SelectMany(s => s.Resultado.Violacoes).Where(v => v.RegraId == aceito.RegraId && v.Mensagem == aceito.Mensagem))
+                    _justificativas.TryAdd(Escalas.Chave(v), aceito.Justificativa);
+        _pendencias = [];
+        _calculando = false;
+        _etapa = 2;
+    }
+
+    async Task Aprovar()
+    {
+        if (_ocorrencia is null) return;
+        _calculando = true;
+        StateHasChanged();
+        await Respirar();
+        try
+        {
+            var r = Ocorrencias.Aprovar(Dados, _ocorrencia, [.. _escolhas.Values], _justificativas, DateTimeOffset.Now);
+            await Loja.Substituir(r.Dados, r.Pendencias.Count == 0 ? "Ocorrência aprovada." : null);
+            _pendencias = [.. r.Pendencias];
+            if (_pendencias.Count == 0) Nav.NavigateTo("ocorrencias");
+        }
+        catch (EscalaException e)
+        {
+            Loja.Avisar(e.Message, erro: true);
+        }
+        _calculando = false;
+    }
+}

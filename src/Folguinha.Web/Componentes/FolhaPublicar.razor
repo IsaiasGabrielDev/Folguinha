@@ -1,0 +1,95 @@
+@using Folguinha.Domain.Regras
+@inherits PaginaBase
+@* Publicação: sem bloqueios e com justificativa para cada alerta (ESPEC §2, §14). *@
+
+<Folha Aberta="Aberta" Titulo="@(Escala?.Versoes.Count > 0 ? "Publicar nova versão" : "Publicar escala")" AoFechar="AoFechar">
+    @if (Escala is not null)
+    {
+        @if (Bloqueios.Count > 0)
+        {
+            <p class="nota erro"><Icone Nome="alerta" Tamanho="18" /> <span>Resolva @Bloqueios.Count bloqueio(s) antes de publicar. Eles quebram regras obrigatórias.</span></p>
+            @foreach (var v in Bloqueios.Take(5))
+            {
+                <AvisoRegra Violacao="v" />
+            }
+        }
+        else
+        {
+            @if (Alertas.Count > 0)
+            {
+                <p class="ajuda">Cada alerta precisa de uma justificativa. Ela fica registrada na versão e no relatório de validação.</p>
+                <div class="linha">
+                    <input class="entrada cresce" placeholder="Mesma justificativa para todos" aria-label="Justificativa para todos" @bind="_paraTodos" />
+                    <button type="button" class="botao pequeno" disabled="@string.IsNullOrWhiteSpace(_paraTodos)" @onclick="AplicarATodos">Aplicar</button>
+                </div>
+                @foreach (var v in Alertas)
+                {
+                    var chave = Escalas.Chave(v);
+                    <AvisoRegra Violacao="v">
+                        <label class="campo">
+                            Justificativa
+                            <input value="@_justificativas.GetValueOrDefault(chave)" @onchange="e => _justificativas[chave] = e.Value?.ToString() ?? string.Empty" maxlength="200" />
+                        </label>
+                    </AvisoRegra>
+                }
+            }
+            else
+            {
+                <p class="nota ok"><Icone Nome="ok" Tamanho="18" /> Nenhum alerta pendente.</p>
+            }
+            <label class="campo">
+                Motivo <span class="dica">Opcional. Ex.: “Troca pedida pela Carla”</span>
+                <input @bind="_motivo" maxlength="120" />
+            </label>
+            <button type="button" class="botao primario" disabled="@(_publicando || Alertas.Any(v => string.IsNullOrWhiteSpace(_justificativas.GetValueOrDefault(Escalas.Chave(v)))))" @onclick="Publicar">
+                @(_publicando ? "Publicando…" : $"Publicar versão {Escala.Versoes.Count + 1}")
+            </button>
+        }
+    }
+</Folha>
+
+@code {
+    [Parameter] public bool Aberta { get; set; }
+    [Parameter] public Escala? Escala { get; set; }
+    [Parameter] public IReadOnlyList<Violacao> Violacoes { get; set; } = [];
+    [Parameter] public EventCallback AoFechar { get; set; }
+    [Parameter] public EventCallback AoPublicar { get; set; }
+
+    readonly Dictionary<string, string> _justificativas = [];
+    string _motivo = "", _paraTodos = "";
+    bool _publicando;
+
+    List<Violacao> Bloqueios => [.. Violacoes.Where(v => v.Severidade == Severidade.Bloqueio)];
+
+    List<Violacao> Alertas => [.. Violacoes.Where(Escalas.PrecisaJustificativa)];
+
+    void AplicarATodos()
+    {
+        foreach (var v in Alertas) _justificativas[Escalas.Chave(v)] = _paraTodos.Trim();
+    }
+
+    async Task Publicar()
+    {
+        if (Escala is null) return;
+        _publicando = true;
+        StateHasChanged();
+        await Respirar();
+        try
+        {
+            var r = Escalas.Publicar(Dados, Escala.Id, _motivo, _justificativas, DateTimeOffset.Now);
+            if (r.Publicado)
+            {
+                await Loja.Substituir(r.Dados, $"Versão {r.Dados.Escala(Escala.Id)!.Versoes.Count} publicada.");
+                _motivo = "";
+                _justificativas.Clear();
+                await AoPublicar.InvokeAsync();
+            }
+            else Loja.Avisar($"Ainda há {r.Pendencias.Count} pendência(s) para publicar.", erro: true);
+        }
+        catch (EscalaException e)
+        {
+            Loja.Avisar(e.Message, erro: true);
+        }
+        _publicando = false;
+    }
+}

@@ -1,0 +1,80 @@
+@page "/ocorrencias"
+@inherits PaginaBase
+
+<PageTitle>Ocorrências · Folguinha</PageTitle>
+
+<Cabecalho Titulo="Ocorrências">
+    <Acoes>
+        <a class="botao primario pequeno" href="ocorrencias/nova"><Icone Nome="mais-um" Tamanho="18" Traco="2.2" /> Registrar</a>
+    </Acoes>
+</Cabecalho>
+
+<p class="nota"><Icone Nome="cadeado" Tamanho="18" /><span>Registre só o motivo administrativo. Diagnósticos e documentos médicos não devem ser anotados aqui.</span></p>
+
+@if (Dados.Ocorrencias.Count == 0)
+{
+    <Vazio Icone="ocorrencias" Titulo="Nenhuma ocorrência" Texto="Atestados, férias, faltas e folgas extras aparecem aqui, com o remanejamento feito.">
+        <a class="botao primario" href="ocorrencias/nova">Registrar ocorrência</a>
+    </Vazio>
+}
+else
+{
+    @foreach (var grupo in Grupos)
+    {
+        <section class="pilha">
+            <h2>@grupo.Titulo</h2>
+            <div class="cartao compacto">
+                <ul class="lista">
+                    @foreach (var o in grupo.Itens)
+                    {
+                        var ocorrencia = o;
+                        var f = Dados.Funcionario(o.FuncionarioId);
+                        <li class="item">
+                            <span class="avatar @Formatos.ClasseAvatar(o.FuncionarioId)" aria-hidden="true">@Formatos.Iniciais(f?.Nome ?? "?")</span>
+                            <span class="cresce">
+                                <span class="nome" style="display: block;">@(f?.Nome ?? "Pessoa removida")</span>
+                                <span class="detalhe">@Ocorrencias.Nome(o.Tipo) · @Periodo(o)@(string.IsNullOrWhiteSpace(o.Observacao) ? "" : $" · {o.Observacao}")</span>
+                            </span>
+                            <button class="botao texto pequeno" aria-label="@($"Excluir ocorrência de {f?.Nome}")" @onclick="() => _excluir = ocorrencia">
+                                <Icone Nome="lixo" Tamanho="18" />
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </section>
+    }
+}
+
+<Folha Aberta="_excluir is not null" Titulo="Excluir ocorrência?" AoFechar="() => _excluir = null">
+    <p>O registro sai da lista. <strong>A escala não muda sozinha</strong>: se a pessoa voltar a trabalhar nesses dias, ajuste a escala.</p>
+    <div class="acoes">
+        <button class="botao" @onclick="() => _excluir = null">Cancelar</button>
+        <button class="botao primario" @onclick="Excluir">Excluir</button>
+    </div>
+</Folha>
+
+@code {
+    Ocorrencia? _excluir;
+
+    IEnumerable<(string Titulo, List<Ocorrencia> Itens)> Grupos
+    {
+        get
+        {
+            var atuais = Dados.Ocorrencias.Where(o => o.Fim >= Loja.Hoje).OrderBy(o => o.Inicio).ToList();
+            var passadas = Dados.Ocorrencias.Where(o => o.Fim < Loja.Hoje).OrderByDescending(o => o.Inicio).ToList();
+            if (atuais.Count > 0) yield return ("Atuais e próximas", atuais);
+            if (passadas.Count > 0) yield return ("Anteriores", passadas);
+        }
+    }
+
+    static string Periodo(Ocorrencia o) => o.Inicio == o.Fim ? Formatos.Dia(o.Inicio) : $"{Formatos.Dia(o.Inicio)} a {Formatos.Dia(o.Fim)}";
+
+    async Task Excluir()
+    {
+        if (_excluir is null) return;
+        var id = _excluir.Id;
+        _excluir = null;
+        await Loja.Alterar(d => Ocorrencias.Remover(d, id), "Ocorrência excluída.");
+    }
+}

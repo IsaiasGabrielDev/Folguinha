@@ -1,0 +1,172 @@
+@inherits PaginaBase
+@inject IFeriadoProvider Provedor
+
+<div class="pilha">
+    <div class="linha entre">
+        <div class="segmentado" role="group" aria-label="Ano">
+            @foreach (var ano in new[] { Loja.Hoje.Year, Loja.Hoje.Year + 1 })
+            {
+                var a = ano;
+                <button type="button" aria-pressed="@((_ano == a) ? "true" : "false")" @onclick="() => TrocarAno(a)">@a</button>
+            }
+        </div>
+        <button type="button" class="botao texto pequeno" disabled="@_buscando" @onclick="Buscar">
+            <Icone Nome="atualizar" Tamanho="16" Traco="2" /> @(_buscando ? "Buscando…" : "Atualizar nacionais")
+        </button>
+    </div>
+    <p class="ajuda pequeno">
+        @(Dados.AnosDeFeriadosCarregados.Contains(_ano)
+            ? "Feriados nacionais carregados da BrasilAPI. Desligue os que a loja trata como dia normal."
+            : "Toque em “Atualizar nacionais” para buscar os feriados do ano (precisa de internet).")
+    </p>
+
+    <div class="cartao destaque">
+        <label class="linha fixa" style="gap: .75rem; cursor: pointer;">
+            <span class="cresce">
+                <strong>Rodízio de feriados</strong><br />
+                <span class="ajuda pequeno">Quem trabalhou no último feriado tem prioridade para folgar no próximo.</span>
+            </span>
+            <input class="interruptor" type="checkbox" checked="@Dados.RodizioFeriados" @onchange="AlternarRodizio" />
+        </label>
+    </div>
+
+    <div class="cartao compacto">
+        @if (DoAno.Count == 0)
+        {
+            <p class="ajuda">Nenhum feriado cadastrado em @_ano.</p>
+        }
+        <ul class="lista">
+            @foreach (var f in DoAno)
+            {
+                var feriado = f;
+                <li class="item">
+                    <div class="avatar @(f.Considerado ? "avatar-0" : "")" style="border-radius: 14px; flex-direction: column; line-height: 1; @(f.Considerado ? "" : "background: var(--superficie-2); color: var(--tinta-3);")">
+                        <span>@f.Data.Day</span><span style="font-size: .6rem; font-family: var(--fonte);">@Formatos.MesCurto(f.Data.Month)</span>
+                    </div>
+                    <button type="button" class="cresce" style="text-align: left; background: none; border: 0; padding: 0; cursor: pointer;" @onclick="() => Editar(feriado)">
+                        <span class="nome" style="display: block; @(f.Considerado ? "" : "color: var(--tinta-3);")">@f.Nome</span>
+                        <span class="detalhe">@Formatos.DiaSemana(f.Data.DayOfWeek) · @Formatos.Abrangencia(f.Abrangencia)@(f.Origem == OrigemFeriado.Manual ? " · adicionado por você" : "")</span>
+                    </button>
+                    <input class="interruptor" type="checkbox" checked="@f.Considerado" aria-label="@($"Considerar {f.Nome}")"
+                           @onchange="() => Alternar(feriado)" />
+                </li>
+            }
+        </ul>
+    </div>
+
+    <button type="button" class="botao" @onclick="Novo"><Icone Nome="mais-um" Tamanho="18" Traco="2.2" /> Adicionar feriado</button>
+    @if (AoSalvar.HasDelegate)
+    {
+        <button type="button" class="botao primario" @onclick="() => AoSalvar.InvokeAsync()">@TextoBotao</button>
+    }
+</div>
+
+<Folha Aberta="_edicao is not null" Titulo="@(_original is null ? "Novo feriado" : "Editar feriado")" AoFechar="() => _edicao = null">
+    @if (_edicao is not null)
+    {
+        <form class="pilha" @onsubmit="SalvarEdicao" @onsubmit:preventDefault>
+            <label class="campo">Nome <input @bind="_edicao.Nome" required maxlength="80" /></label>
+            <label class="campo">
+                Data
+                <input type="date" @bind="_edicao.Data" required disabled="@(_original?.Origem == OrigemFeriado.Api)" />
+                @if (_original?.Origem == OrigemFeriado.Api)
+                {
+                    <span class="dica">Feriado nacional: a data não muda. Para outra data, desligue-o e cadastre um novo.</span>
+                }
+            </label>
+            <label class="campo">
+                Tipo
+                <select @bind="_edicao.Abrangencia">
+                    @foreach (var a in Enum.GetValues<AbrangenciaFeriado>())
+                    {
+                        <option value="@a">@Formatos.Abrangencia(a)</option>
+                    }
+                </select>
+            </label>
+            <label class="marcador"><input type="checkbox" @bind="_edicao.Considerado" /> Considerar como feriado</label>
+            <div class="acoes">
+                @if (_original is { Origem: OrigemFeriado.Manual })
+                {
+                    <button type="button" class="botao perigo" @onclick="Remover"><Icone Nome="lixo" Tamanho="18" /> Remover</button>
+                }
+                <button type="submit" class="botao primario">Salvar</button>
+            </div>
+        </form>
+    }
+</Folha>
+
+@code {
+    [Parameter] public string TextoBotao { get; set; } = "Continuar";
+    [Parameter] public EventCallback AoSalvar { get; set; }
+
+    sealed class Edicao
+    {
+        public string Nome { get; set; } = "";
+        public DateOnly Data { get; set; }
+        public AbrangenciaFeriado Abrangencia { get; set; } = AbrangenciaFeriado.Municipal;
+        public bool Considerado { get; set; } = true;
+    }
+
+    int _ano = Loja.Hoje.Year;
+    bool _buscando;
+    Edicao? _edicao;
+    Feriado? _original;
+
+    List<Feriado> DoAno => [.. Dados.Feriados.Where(f => f.Data.Year == _ano).OrderBy(f => f.Data)];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Dados.AnosDeFeriadosCarregados.Contains(_ano)) await Buscar();
+    }
+
+    async Task TrocarAno(int ano)
+    {
+        _ano = ano;
+        if (!Dados.AnosDeFeriadosCarregados.Contains(ano)) await Buscar();
+    }
+
+    async Task Buscar()
+    {
+        _buscando = true;
+        StateHasChanged();
+        var (novos, erro) = await Feriados.Atualizar(Dados, Provedor, _ano);
+        if (erro is null) await Loja.Substituir(novos, $"Feriados nacionais de {_ano} atualizados.");
+        else Loja.Avisar(erro, erro: true);
+        _buscando = false;
+    }
+
+    Task AlternarRodizio() => Loja.Alterar(d => d with { RodizioFeriados = !d.RodizioFeriados });
+
+    Task Alternar(Feriado f) => Loja.Alterar(d => Feriados.Salvar(d, f, f with { Considerado = !f.Considerado }));
+
+    void Novo()
+    {
+        _original = null;
+        _edicao = new Edicao { Data = new DateOnly(_ano, Loja.Hoje.Month, 1) };
+    }
+
+    void Editar(Feriado f)
+    {
+        _original = f;
+        _edicao = new Edicao { Nome = f.Nome, Data = f.Data, Abrangencia = f.Abrangencia, Considerado = f.Considerado };
+    }
+
+    async Task SalvarEdicao()
+    {
+        if (_edicao is null || string.IsNullOrWhiteSpace(_edicao.Nome)) return;
+        var novo = _original is null
+            ? new Feriado(_edicao.Data, _edicao.Nome.Trim(), _edicao.Abrangencia, _edicao.Considerado, OrigemFeriado.Manual)
+            : _original with { Data = _edicao.Data, Nome = _edicao.Nome.Trim(), Abrangencia = _edicao.Abrangencia, Considerado = _edicao.Considerado };
+        if (await Loja.Alterar(d => Feriados.Salvar(d, _original, novo), "Feriado salvo."))
+        {
+            _ano = novo.Data.Year;
+            _edicao = null;
+        }
+    }
+
+    async Task Remover()
+    {
+        if (_original is null) return;
+        if (await Loja.Alterar(d => Feriados.Remover(d, _original), "Feriado removido.")) _edicao = null;
+    }
+}

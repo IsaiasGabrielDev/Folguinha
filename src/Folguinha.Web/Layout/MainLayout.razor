@@ -1,3 +1,96 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject Loja Loja
+@inject NavigationManager Nav
 
-@Body
+<div class="app @(MostrarBarra ? "" : "sem-barra")">
+    @if (MostrarBarra)
+    {
+        <nav class="barra" aria-label="Principal">
+            <NavLink href="" Match="NavLinkMatch.All"><span class="pilula"><Icone Nome="painel" /></span>Painel</NavLink>
+            <NavLink href="escala"><span class="pilula"><Icone Nome="escala" /></span>Escala</NavLink>
+            <NavLink href="equipe"><span class="pilula"><Icone Nome="equipe" /></span>Equipe</NavLink>
+            <NavLink href="ocorrencias"><span class="pilula"><Icone Nome="ocorrencias" /></span>Ocorrências</NavLink>
+            <NavLink href="mais"><span class="pilula"><Icone Nome="mais" /></span>Mais</NavLink>
+        </nav>
+    }
+
+    <main class="conteudo @(Largo ? "largo" : "")">
+        @if (!Loja.Carregado)
+        {
+            <p class="ajuda" role="status">Abrindo seus dados…</p>
+        }
+        else
+        {
+            <ErrorBoundary @ref="_erro">
+                <ChildContent>@Body</ChildContent>
+            </ErrorBoundary>
+        }
+    </main>
+
+    @if (Loja.Mensagem is { } m)
+    {
+        <div class="toast @(m.Erro ? "erro" : "")" role="@(m.Erro ? "alert" : "status")">
+            <span>@m.Texto</span>
+            <button type="button" @onclick="Loja.LimparMensagem">Ok</button>
+        </div>
+    }
+</div>
+
+@code {
+    ErrorBoundary? _erro;
+    CancellationTokenSource? _temporizador;
+
+    static readonly string[] SemCadastro = ["inicio", "diagnostico", "backup", "sobre"];
+
+    string Rota => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/');
+
+    bool MostrarBarra => Loja.Carregado && Loja.Dados.Empresa is not null && !Rota.StartsWith("inicio", StringComparison.Ordinal);
+
+    bool Largo => Rota.StartsWith("escala", StringComparison.Ordinal);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Loja.Mudou += AoMudar;
+        Nav.LocationChanged += AoNavegar;
+        await Loja.Carregar();
+        Proteger();
+    }
+
+    protected override void OnParametersSet() => _erro?.Recover();
+
+    void AoNavegar(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        Proteger();
+        StateHasChanged();
+    }
+
+    /// Sem empresa cadastrada, leva para o cadastro inicial.
+    void Proteger()
+    {
+        if (Loja.Carregado && (Loja.Dados.Empresa is null || !Loja.Dados.AceitouAviso)
+            && !SemCadastro.Any(r => Rota.StartsWith(r, StringComparison.Ordinal)))
+            Nav.NavigateTo("inicio", replace: true);
+    }
+
+    void AoMudar()
+    {
+        _temporizador?.Cancel();
+        if (Loja.Mensagem is { Erro: false })
+        {
+            var cts = _temporizador = new CancellationTokenSource();
+            _ = Task.Delay(4000, cts.Token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled) InvokeAsync(Loja.LimparMensagem);
+            }, TaskScheduler.Default);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Loja.Mudou -= AoMudar;
+        Nav.LocationChanged -= AoNavegar;
+        _temporizador?.Cancel();
+    }
+}

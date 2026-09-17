@@ -1,0 +1,120 @@
+@using Folguinha.Domain.Regras
+@* Grade funcionário × dia com linha de cobertura. *@
+<div class="grade-escala" role="region" aria-label="Grade da escala" tabindex="0">
+    <table>
+        <caption class="sr-only">Escala de @Formatos.Dia(Dias[0]) a @Formatos.Dia(Dias[^1]). Toque num dia para ajustar.</caption>
+        <thead>
+            <tr>
+                <th scope="col" class="pessoa">Equipe</th>
+                @foreach (var d in Dias)
+                {
+                    var feriado = Feriados.GetValueOrDefault(d);
+                    <th scope="col" class="@(feriado is not null ? "feriado" : "")" title="@feriado?.Nome">
+                        @Formatos.DiaSemanaCurto(d.DayOfWeek)<strong>@d.Day</strong>
+                        @if (feriado is not null)
+                        {
+                            <span class="sr-only">feriado: @feriado.Nome</span>
+                        }
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var f in Pessoas)
+            {
+                var pessoa = f;
+                <tr>
+                    <th scope="row" class="pessoa">
+                        <a href="@($"equipe/{f.Id}")">
+                            <span class="avatar mini @Formatos.ClasseAvatar(f.Id)" aria-hidden="true">@Formatos.Iniciais(f.Nome)</span>
+                            <span>
+                                @PrimeiroNome(f.Nome)
+                                <span class="horas">@Formatos.Horas(HorasNaVista(f.Id))</span>
+                            </span>
+                        </a>
+                    </th>
+                    @foreach (var d in Dias)
+                    {
+                        var dia = d;
+                        var a = Alocacao(f.Id, d);
+                        var problema = Problemas.Contains((f.Id, d));
+                        <td>
+                            <button type="button"
+                                    class="celula @Formatos.ClasseTurno(Dados, a) @(problema ? "problema" : "") @(a?.Travada == true ? "travada" : "") @(Selecionada == (f.Id, d) ? "selecionada" : "")"
+                                    aria-label="@($"{f.Nome}, {Formatos.Dia(d)}: {Escalas.Descrever(Dados, a)}{(problema ? ", tem aviso" : "")}{(a?.Travada == true ? ", ajuste manual" : "")}")"
+                                    @onclick="() => AoSelecionar.InvokeAsync((pessoa, dia))">
+                                @Formatos.Sigla(Dados, a)
+                            </button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr class="cobertura">
+                <th scope="row" class="pessoa ajuda pequeno">Cobertura</th>
+                @foreach (var d in Dias)
+                {
+                    var (escalados, minimo) = Cobertura(d);
+                    var falta = FaltaNoDia.Contains(d);
+                    <td class="@(falta ? "falta" : "")" title="Escalados / mínimo">
+                        @if (falta)
+                        {
+                            <span title="Turno ou função sem cobertura">falta</span>
+                        }
+                        else if (minimo > 0)
+                        {
+                            <span>@escalados/@minimo</span>
+                        }
+                        else
+                        {
+                            <span aria-label="sem demanda">–</span>
+                        }
+                    </td>
+                }
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DadosDaUnidade Dados { get; set; } = default!;
+    [Parameter, EditorRequired] public Escala Escala { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<DateOnly> Dias { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<Funcionario> Pessoas { get; set; } = [];
+    [Parameter] public IReadOnlyList<Violacao> Violacoes { get; set; } = [];
+    [Parameter] public (Guid, DateOnly)? Selecionada { get; set; }
+    [Parameter] public EventCallback<(Funcionario, DateOnly)> AoSelecionar { get; set; }
+
+    Dictionary<(Guid, DateOnly), Alocacao> _porChave = [];
+    HashSet<(Guid, DateOnly)> Problemas = [];
+    HashSet<DateOnly> FaltaNoDia = [];
+    Dictionary<DateOnly, Feriado> Feriados = [];
+    IReadOnlySet<DateOnly> _fechados = new HashSet<DateOnly>();
+
+    protected override void OnParametersSet()
+    {
+        _porChave = Escala.Atual.GroupBy(a => (a.FuncionarioId, a.Data)).ToDictionary(g => g.Key, g => g.First());
+        Problemas = [.. Violacoes.Where(v => v.FuncionarioId is not null && v.Data is not null && v.Severidade != Severidade.Informativo)
+            .Select(v => (v.FuncionarioId!.Value, v.Data!.Value))];
+        FaltaNoDia = [.. Violacoes.Where(v => v.RegraId == CoberturaMinima.Padrao.Id && v.Data is not null).Select(v => v.Data!.Value)];
+        Feriados = Dados.Feriados.Where(f => f.Considerado).GroupBy(f => f.Data).ToDictionary(g => g.Key, g => g.First());
+        _fechados = Escalas.DiasFechados(Dados, Escala.Inicio, Escala.Fim);
+    }
+
+    Alocacao? Alocacao(Guid f, DateOnly d) => _porChave.GetValueOrDefault((f, d));
+
+    TimeSpan HorasNaVista(Guid f) => Dias.Select(d => Alocacao(f, d)).OfType<Alocacao>().Where(a => a.Trabalha)
+        .Aggregate(TimeSpan.Zero, (t, a) => t + a.HorasComputadas);
+
+    static string PrimeiroNome(string nome) => nome.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? nome;
+
+    (int Escalados, int Minimo) Cobertura(DateOnly dia)
+    {
+        if (_fechados.Contains(dia)) return (0, 0);
+        var minimo = Demanda.Aplicaveis(Dados.Demandas, dia).GroupBy(d => d.TurnoId)
+            .Sum(g => Math.Max(g.Where(d => d.FuncaoId is null).Sum(d => d.Minimo), g.Where(d => d.FuncaoId is not null).Sum(d => d.Minimo)));
+        var escalados = Escala.Atual.Count(a => a.Data == dia && a.Trabalha && Pessoas.Any(p => p.Id == a.FuncionarioId));
+        return (escalados, minimo);
+    }
+}

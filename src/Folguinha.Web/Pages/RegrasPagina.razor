@@ -1,0 +1,111 @@
+@page "/regras"
+@using Folguinha.Domain.Regras
+@inherits PaginaBase
+
+<PageTitle>Regras · Folguinha</PageTitle>
+
+<Cabecalho Titulo="Regras" Voltar="mais" />
+
+<p class="ajuda">
+    <strong>Obrigatória</strong> impede publicar · <strong>Alerta</strong> exige justificativa · <strong>Preferência</strong> só informa.
+    Regras da CLT não ficam mais brandas que a lei; convenções coletivas podem exigir mais.
+</p>
+
+<div class="cartao compacto">
+    <ul class="lista">
+        @foreach (var r in Vigentes)
+        {
+            var regra = r;
+            var padrao = Padrao.First(p => p.Definicao.Id == r.Definicao.Id);
+            <li class="item" style="align-items: flex-start;">
+                <div class="cresce">
+                    <p class="nome">@r.Definicao.Nome</p>
+                    <p class="detalhe">@r.Definicao.Fundamento · versão @r.Definicao.Versao@(r.Definicao.Responsavel is { } resp ? $" · por {resp}" : "")</p>
+                </div>
+                <button class="chip @(r.Definicao.Nivel == NivelRegra.Obrigatoria ? "sev-bloqueio" : r.Definicao.Nivel == NivelRegra.Alerta ? "sev-atencao" : "sev-info")"
+                        style="border: 0; cursor: pointer; min-height: 2rem;" @onclick="() => Abrir(regra, padrao)"
+                        aria-label="@($"{r.Definicao.Nome}: {Formatos.Nivel(r.Definicao.Nivel)}. Alterar")">
+                    @Formatos.Nivel(r.Definicao.Nivel) <Icone Nome="editar" Tamanho="14" />
+                </button>
+            </li>
+        }
+    </ul>
+</div>
+
+@if (Dados.RegrasConfiguradas.Count > 0)
+{
+    <section class="pilha">
+        <h2>Alterações registradas</h2>
+        <div class="cartao compacto rolagem">
+            <table class="tabela">
+                <thead><tr><th>Regra</th><th>Nível</th><th>Vale a partir de</th><th>Versão</th><th>Por</th></tr></thead>
+                <tbody>
+                    @foreach (var c in Dados.RegrasConfiguradas.OrderByDescending(c => c.AlteradaEm))
+                    {
+                        <tr>
+                            <td>@(Padrao.FirstOrDefault(p => p.Definicao.Id == c.RegraId)?.Definicao.Nome ?? c.RegraId)</td>
+                            <td>@Formatos.Nivel(c.Nivel)</td>
+                            <td>@Formatos.Data(c.VigenteDesde)</td>
+                            <td>@c.Versao</td>
+                            <td>@c.Responsavel</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+<Folha Aberta="_regra is not null" Titulo="@(_regra?.Definicao.Nome ?? "")" AoFechar="() => _regra = null">
+    @if (_regra is not null && _padrao is not null)
+    {
+        <p class="ajuda">@_regra.Definicao.Fundamento</p>
+        <fieldset>
+            <legend>Nível</legend>
+            @foreach (var n in Enum.GetValues<NivelRegra>())
+            {
+                var nivel = n;
+                var permitido = ConfiguracaoDeRegras.PodeUsar(_padrao, n);
+                <label class="marcador" style="opacity: @(permitido ? "1" : ".5");">
+                    <input type="radio" name="nivel" checked="@(_nivel == n)" disabled="@(!permitido)" @onchange="() => _nivel = nivel" />
+                    @Formatos.Nivel(n)@(n == _padrao.Definicao.Nivel ? " (padrão)" : "")@(permitido ? "" : " — não permitido para regra da CLT")
+                </label>
+            }
+        </fieldset>
+        <label class="campo">Vale a partir de <span class="dica">Escalas que começam antes continuam com a regra anterior.</span>
+            <input type="date" @bind="_vigencia" />
+        </label>
+        <label class="campo">Motivo <span class="dica">Ex.: “Convenção coletiva 2026”</span>
+            <input @bind="_motivo" maxlength="120" />
+        </label>
+        <button class="botao primario" disabled="@(_nivel == _regra.Definicao.Nivel)" @onclick="Salvar">Salvar nova versão</button>
+    }
+</Folha>
+
+@code {
+    static readonly IReadOnlyList<Regra> Padrao = CatalogoRegras.Padrao();
+
+    Regra? _regra, _padrao;
+    NivelRegra _nivel;
+    DateOnly _vigencia = Loja.Hoje;
+    string _motivo = "";
+
+    IReadOnlyList<Regra> Vigentes => Escalas.Regras(Dados, DateOnly.MaxValue.AddDays(-1));
+
+    void Abrir(Regra regra, Regra padrao)
+    {
+        _regra = regra;
+        _padrao = padrao;
+        _nivel = regra.Definicao.Nivel;
+        _vigencia = Loja.Hoje;
+        _motivo = "";
+    }
+
+    async Task Salvar()
+    {
+        if (_regra is null) return;
+        if (await Loja.Alterar(d => ConfiguracaoDeRegras.Configurar(d, _regra.Definicao.Id, _nivel, _vigencia, DateTimeOffset.Now,
+                string.IsNullOrWhiteSpace(_motivo) ? null : _motivo.Trim()), "Regra atualizada."))
+            _regra = null;
+    }
+}

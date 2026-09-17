@@ -6,7 +6,7 @@ namespace Folguinha.Web.Servicos;
 /// Loja de exemplo para testar o app sem cadastrar nada (dados fictícios).
 public static class Exemplo
 {
-    public static DadosDaUnidade Loja()
+    public static DadosDaUnidade Loja(DateOnly inicioDaEscala)
     {
         var manha = new Turno(Guid.NewGuid(), "Manhã", new(8, 0), new(16, 20), TimeSpan.FromHours(1));
         var tarde = new Turno(Guid.NewGuid(), "Tarde", new(13, 40), new(22, 0), TimeSpan.FromHours(1));
@@ -18,7 +18,7 @@ public static class Exemplo
         {
             Funcoes = [i < 3 ? caixa.Id : atendente.Id],
             TurnoPrincipal = i % 2 == 0 ? manha.Id : tarde.Id,
-            Situacao = new SituacaoInicial(new DateOnly(2026, 9, 27 + i % 4)),
+            Situacao = new SituacaoInicial(inicioDaEscala.AddDays(-1 - i % 4)),
         }).ToList();
 
         DayOfWeek[] semana = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
@@ -35,7 +35,7 @@ public static class Exemplo
                     : [new Demanda(manha.Id, 1, 2, DiaSemana: d), new Demanda(tarde.Id, 1, 2, DiaSemana: d)]),
                 .. Enum.GetValues<DayOfWeek>().Select(d => new Demanda(manha.Id, 1, 1, caixa.Id, d)),
             ],
-            Feriados = [new Feriado(new DateOnly(2026, 10, 12), "Nossa Senhora Aparecida", AbrangenciaFeriado.Nacional)],
+            AceitouAviso = true,
         };
     }
 }

@@ -1,0 +1,42 @@
+@page "/configuracoes/{Secao}"
+@inherits PaginaBase
+
+<PageTitle>@Titulo · Folguinha</PageTitle>
+
+<Cabecalho Titulo="@Titulo" Voltar="mais" />
+
+@switch (Secao)
+{
+    case "empresa":
+        <div class="cartao"><EditorEmpresa /></div>
+        break;
+    case "funcionamento":
+        <EditorFuncionamento />
+        break;
+    case "turnos":
+        <EditorFuncoesTurnos />
+        break;
+    case "demanda":
+        <EditorDemanda />
+        break;
+    case "feriados":
+        <EditorFeriados />
+        break;
+    default:
+        <Vazio Titulo="Seção não encontrada"><a class="botao" href="mais">Voltar</a></Vazio>
+        break;
+}
+
+@code {
+    [Parameter] public string Secao { get; set; } = "";
+
+    string Titulo => Secao switch
+    {
+        "empresa" => "Empresa",
+        "funcionamento" => "Horário de funcionamento",
+        "turnos" => "Turnos e funções",
+        "demanda" => "Pessoas por turno",
+        "feriados" => "Feriados",
+        _ => "Configurações",
+    };
+}

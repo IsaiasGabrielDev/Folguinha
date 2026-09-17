@@ -134,7 +134,9 @@ public sealed class DiasConsecutivos() : Regra(Padrao)
             {
                 seguidos = anterior?.AddDays(1) == dia ? seguidos + 1 : 1;
                 anterior = dia;
-                if (seguidos == MaximoSeguidos + 1 && ctx.NoPeriodo(dia))
+                // avisa uma vez por sequência: no 7º dia, ou no 1º dia do período se ela veio de antes
+                var primeiroNoPeriodo = ctx.NoPeriodo(dia) && !ctx.NoPeriodo(dia.AddDays(-1));
+                if (seguidos > MaximoSeguidos && ctx.NoPeriodo(dia) && (seguidos == MaximoSeguidos + 1 || primeiroNoPeriodo))
                     yield return Violacao(f, dia,
                         $"{f.Nome} trabalharia {seguidos} dias seguidos até {Dia(dia)} sem o descanso semanal.",
                         $"Dê uma folga a {f.Nome} até {Dia(dia.AddDays(-1))}.");

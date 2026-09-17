@@ -1,0 +1,177 @@
+@inherits PaginaBase
+
+<div class="pilha">
+    @if (Dados.Turnos.Count == 0)
+    {
+        <p class="nota alerta">Cadastre os turnos primeiro.</p>
+    }
+    @foreach (var turno in Dados.Turnos)
+    {
+        var t = turno;
+        <div class="cartao">
+            <div class="linha">
+                <span class="chip @Formatos.ClasseTurno(Dados, t.Id)">@Formatos.Sigla(t.Nome)</span>
+                <h2 class="cresce">@t.Nome</h2>
+                <span class="ajuda pequeno">@Formatos.Hora(t.Inicio)–@Formatos.Hora(t.Fim)</span>
+            </div>
+            <div class="rolagem">
+                <table class="tabela compacta">
+                    <thead>
+                        <tr>
+                            <th scope="col"><span class="sr-only">Pessoas</span></th>
+                            @foreach (var d in Formatos.Semana)
+                            {
+                                <th scope="col" style="text-align: center;">@Formatos.DiaSemanaCurto(d)</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var linha in Linhas(t.Id))
+                        {
+                            var l = linha;
+                            <tr>
+                                <th scope="row">@l.Rotulo</th>
+                                @foreach (var d in Formatos.Semana)
+                                {
+                                    var dia = d;
+                                    <td>
+                                        <input class="numero" type="number" min="0" max="99"
+                                               inputmode="numeric" aria-label="@($"{t.Nome}, {l.Rotulo}, {Formatos.DiaSemana(dia)}")"
+                                               value="@Valor(t.Id, l.Funcao, dia, l.Ideal)"
+                                               @onchange="e => Definir(t.Id, l.Funcao, dia, l.Ideal, e.Value)" />
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (Dados.Funcoes.Count > 0)
+            {
+                <details>
+                    <summary class="botao texto pequeno" style="display: inline-flex;">Exigir funções neste turno</summary>
+                    <div class="rolagem">
+                        <table class="tabela compacta">
+                            <thead>
+                                <tr>
+                                    <th scope="col"><span class="sr-only">Mínimo por função</span></th>
+                                    @foreach (var d in Formatos.Semana)
+                                    {
+                                        <th scope="col" style="text-align: center;">@Formatos.DiaSemanaCurto(d)</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var funcao in Dados.Funcoes)
+                                {
+                                    var f = funcao;
+                                    <tr>
+                                        <th scope="row">@f.Nome</th>
+                                        @foreach (var d in Formatos.Semana)
+                                        {
+                                            var dia = d;
+                                            <td>
+                                                <input class="numero" type="number" min="0" max="99"
+                                                       inputmode="numeric" aria-label="@($"{t.Nome}, {f.Nome}, {Formatos.DiaSemana(dia)}")"
+                                                       value="@Valor(t.Id, f.Id, dia, false)"
+                                                       @onchange="e => Definir(t.Id, f.Id, dia, false, e.Value)" />
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            }
+        </div>
+    }
+
+    <div class="cartao">
+        <h2>Datas especiais</h2>
+        <p class="ajuda">Substituem a demanda do dia da semana (ex.: Black Friday, véspera de Natal).</p>
+        @foreach (var d in _demandas.Where(x => x.Data is not null).OrderBy(x => x.Data))
+        {
+            var demanda = d;
+            <div class="linha">
+                <span class="cresce">@Formatos.Dia(d.Data!.Value) · @Dados.Turnos.FirstOrDefault(t => t.Id == d.TurnoId)?.Nome@(d.FuncaoId is { } fid ? $" · {Dados.Funcoes.FirstOrDefault(f => f.Id == fid)?.Nome}" : ""): mín. @d.Minimo, ideal @d.Ideal</span>
+                <button type="button" class="botao texto pequeno" aria-label="Remover data especial" @onclick="() => _demandas.Remove(demanda)"><Icone Nome="lixo" Tamanho="18" /></button>
+            </div>
+        }
+        @if (Dados.Turnos.Count > 0)
+        {
+            <div class="grade-2 responsiva">
+                <label class="campo">Data <input type="date" @bind="_especialData" /></label>
+                <label class="campo">Turno
+                    <select @bind="_especialTurno">
+                        @foreach (var t in Dados.Turnos)
+                        {
+                            <option value="@t.Id">@t.Nome</option>
+                        }
+                    </select>
+                </label>
+                <label class="campo">Mínimo <input type="number" min="0" max="99" @bind="_especialMinimo" /></label>
+                <label class="campo">Ideal <input type="number" min="0" max="99" @bind="_especialIdeal" /></label>
+            </div>
+            <button type="button" class="botao" disabled="@(_especialData is null)" @onclick="AdicionarEspecial">Adicionar data especial</button>
+        }
+    </div>
+
+    <button type="button" class="botao primario" @onclick="Salvar">@TextoBotao</button>
+</div>
+
+@code {
+    [Parameter] public string TextoBotao { get; set; } = "Salvar";
+    [Parameter] public EventCallback AoSalvar { get; set; }
+
+    sealed record Linha(string Rotulo, Guid? Funcao, bool Ideal);
+
+    List<Demanda> _demandas = [];
+    DateOnly? _especialData;
+    Guid _especialTurno;
+    int _especialMinimo = 1, _especialIdeal = 1;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _demandas = Dados.Demandas.Count > 0 || Dados.Turnos.Count == 0
+            ? [.. Dados.Demandas]
+            : [.. Dados.Turnos.SelectMany(t => Formatos.Semana.Select(d =>
+                d is DayOfWeek.Saturday or DayOfWeek.Sunday ? new Demanda(t.Id, 1, 1, DiaSemana: d) : new Demanda(t.Id, 2, 2, DiaSemana: d)))];
+        _especialTurno = Dados.Turnos.FirstOrDefault()?.Id ?? Guid.Empty;
+    }
+
+    static IEnumerable<Linha> Linhas(Guid _) => [new("Mínimo", null, false), new("Ideal", null, true)];
+
+    Demanda? Buscar(Guid turno, Guid? funcao, DayOfWeek dia) =>
+        _demandas.FirstOrDefault(d => d.Data is null && d.TurnoId == turno && d.FuncaoId == funcao && d.DiaSemana == dia);
+
+    string Valor(Guid turno, Guid? funcao, DayOfWeek dia, bool ideal) =>
+        Buscar(turno, funcao, dia) is { } d ? (ideal ? d.Ideal : d.Minimo).ToString() : (funcao is null ? "0" : "");
+
+    void Definir(Guid turno, Guid? funcao, DayOfWeek dia, bool ideal, object? valor)
+    {
+        var n = int.TryParse(valor?.ToString(), out var v) ? Math.Clamp(v, 0, 99) : 0;
+        var atual = Buscar(turno, funcao, dia);
+        if (atual is not null) _demandas.Remove(atual);
+        var nova = (atual ?? new Demanda(turno, 0, 0, funcao, dia)) switch
+        {
+            var d when ideal => d with { Ideal = n, Minimo = Math.Min(d.Minimo, n) },
+            var d => d with { Minimo = n, Ideal = Math.Max(d.Ideal, n) },
+        };
+        if (nova.Minimo > 0 || nova.Ideal > 0) _demandas.Add(nova);
+    }
+
+    void AdicionarEspecial()
+    {
+        if (_especialData is not { } data) return;
+        _demandas.Add(new Demanda(_especialTurno, _especialMinimo, Math.Max(_especialMinimo, _especialIdeal), Data: data));
+        _especialData = null;
+    }
+
+    async Task Salvar()
+    {
+        var ok = await Loja.Alterar(d => d with { Demandas = [.. _demandas] }, AoSalvar.HasDelegate ? null : "Demanda salva.");
+        if (ok) await AoSalvar.InvokeAsync();
+    }
+}

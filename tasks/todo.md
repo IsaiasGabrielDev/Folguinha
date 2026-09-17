@@ -59,8 +59,14 @@
 - [x] Exporta rascunho (identificado) ou qualquer versão; ausências sem motivo (LGPD)
   - Verify: 135 testes; exportação completa validada com o OpenXmlValidator (0 erros)
 
-## Fase 8 — Telas
-- [ ] Ver SPEC.md "Telas"
+## Fase 8 — Telas (Blazor)
+- [x] Sistema visual dos mockups em `wwwroot/css/app.css` (contraste AA, alvos ≥ 44px, barra inferior no celular / lateral no computador)
+- [x] Cadastro inicial em 8 passos (`/inicio`) com aviso legal e loja de exemplo; editores reaproveitados em Mais
+- [x] Painel, Escala (grade semana/quinzena/mês, filtros, ajuste por célula com revalidação, gerar, publicar com justificativas, descartar, regerar, encerrar)
+- [x] Equipe + ficha (resumo do mês, cadastro, disponibilidade, situação inicial, folga extra com "aplicar a todos")
+- [x] Ocorrências: lista e fluxo registro → substitutos → impacto → aprovar
+- [x] Mais: feriados (BrasilAPI), regras, histórico com diferenças, exportar, backup/importar/apagar, sobre, diagnóstico isolado
+  - Verify: `node tools/navegador.mjs http://localhost:5180/ --script tools/e2e-beta.mjs` (390×844 e 1280×900) → roteiro completo sem erros no console
 
 ## Fase 9 — Publicação
 - [ ] Publish Release + verificação offline + workflow de deploy

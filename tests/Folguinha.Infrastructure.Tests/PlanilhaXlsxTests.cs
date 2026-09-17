@@ -76,7 +76,7 @@ public class PlanilhaXlsxTests
         Assert.Equal("qui 01/10", linha2[0].Descendants(S + "t").Single().Value);
         Assert.Equal("7.33", linha2[2].Element(S + "v")!.Value);
         Assert.Null(linha2[2].Attribute("t"));
-        Assert.Empty(aba.Descendants(S + "row").ElementAt(2).Elements(S + "c").Where(c => (string)c.Attribute("r")! == "C3"));
+        Assert.DoesNotContain(aba.Descendants(S + "row").ElementAt(2).Elements(S + "c"), c => (string)c.Attribute("r")! == "C3");
     }
 
     [Fact]

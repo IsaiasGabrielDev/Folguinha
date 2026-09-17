@@ -1,0 +1,14 @@
+@* Estado vazio com explicação e uma ação. *@
+<div class="vazio" role="status">
+    <div class="icone-grande"><Icone Nome="@Icone" Tamanho="26" /></div>
+    <h2>@Titulo</h2>
+    <p>@Texto</p>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string Icone { get; set; } = "info";
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public string? Texto { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

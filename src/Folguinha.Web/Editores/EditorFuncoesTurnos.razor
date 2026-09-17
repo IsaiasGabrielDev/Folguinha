@@ -1,0 +1,133 @@
+@inherits PaginaBase
+
+<div class="pilha">
+    <div class="cartao">
+        <div class="secao"><h2>Turnos</h2><span class="contagem">@_turnos.Count</span></div>
+        <p class="ajuda">Horários de trabalho que a escala usa. O intervalo é descontado das horas.</p>
+        @foreach (var t in _turnos)
+        {
+            var turno = t;
+            <fieldset class="cartao compacto" style="box-shadow: none; border: 1.5px solid var(--linha);">
+                <legend class="sr-only">Turno @t.Nome</legend>
+                <div class="linha">
+                    <span class="chip @Formatos.ClasseTurno(DadosTemporarios, t.Id)" aria-hidden="true">@Formatos.Sigla(t.Nome)</span>
+                    <label class="campo cresce"><span class="sr-only">Nome do turno</span>
+                        <input value="@t.Nome" maxlength="30" aria-label="Nome do turno" @onchange="e => MudarTurno(turno, x => x with { Nome = e.Value?.ToString() ?? x.Nome })" />
+                    </label>
+                    <button type="button" class="botao texto pequeno" aria-label="@($"Remover turno {t.Nome}")" @onclick="() => _turnos.Remove(turno)"><Icone Nome="lixo" Tamanho="18" /></button>
+                </div>
+                <div class="grade-3">
+                    <label class="campo">Início <input type="time" value="@Formatos.Hora(t.Inicio)" @onchange="e => MudarHora(turno, e.Value, h => turno with { Inicio = h })" /></label>
+                    <label class="campo">Fim <input type="time" value="@Formatos.Hora(t.Fim)" @onchange="e => MudarHora(turno, e.Value, h => turno with { Fim = h })" /></label>
+                    <label class="campo">Intervalo (min)
+                        <input type="number" min="0" max="240" step="5" value="@((int)t.Intervalo.TotalMinutes)"
+                               @onchange="e => MudarTurno(turno, x => x with { Intervalo = TimeSpan.FromMinutes(int.TryParse(e.Value?.ToString(), out var m) ? Math.Clamp(m, 0, 240) : 60) })" />
+                    </label>
+                </div>
+                <p class="ajuda pequeno">@Resumo(t)</p>
+            </fieldset>
+        }
+        <button type="button" class="botao" @onclick="NovoTurno"><Icone Nome="mais-um" Tamanho="18" /> Adicionar turno</button>
+    </div>
+
+    <div class="cartao">
+        <div class="secao"><h2>Funções</h2><span class="contagem">@_funcoes.Count</span></div>
+        <p class="ajuda">Opcional. Use quando precisar de gente específica no turno (ex.: caixa, gerente).</p>
+        <ul class="lista">
+            @foreach (var f in _funcoes)
+            {
+                var funcao = f;
+                <li class="item">
+                    <input class="entrada cresce" value="@f.Nome" maxlength="30" aria-label="Nome da função"
+                           @onchange="e => Renomear(funcao, e.Value?.ToString())" />
+                    <button type="button" class="botao texto pequeno" aria-label="@($"Remover função {f.Nome}")" @onclick="() => _funcoes.Remove(funcao)"><Icone Nome="lixo" Tamanho="18" /></button>
+                </li>
+            }
+        </ul>
+        <form class="linha" @onsubmit="NovaFuncao" @onsubmit:preventDefault>
+            <input class="entrada cresce" @bind="_novaFuncao" placeholder="Nova função, ex.: Caixa" maxlength="30" aria-label="Nova função" />
+            <button type="submit" class="botao pequeno" disabled="@string.IsNullOrWhiteSpace(_novaFuncao)">Adicionar</button>
+        </form>
+    </div>
+
+    <button type="button" class="botao primario" disabled="@(_turnos.Count == 0)" @onclick="Salvar">@TextoBotao</button>
+    @if (_turnos.Count == 0)
+    {
+        <p class="ajuda pequeno">Cadastre ao menos um turno.</p>
+    }
+</div>
+
+@code {
+    [Parameter] public string TextoBotao { get; set; } = "Salvar";
+    [Parameter] public EventCallback AoSalvar { get; set; }
+
+    List<Turno> _turnos = [];
+    List<Funcao> _funcoes = [];
+    string _novaFuncao = "";
+
+    DadosDaUnidade DadosTemporarios => Dados with { Turnos = _turnos };
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _turnos = Dados.Turnos.Count > 0
+            ? [.. Dados.Turnos]
+            : [new(Guid.NewGuid(), "Manhã", new(8, 0), new(16, 20), TimeSpan.FromHours(1)),
+               new(Guid.NewGuid(), "Tarde", new(13, 40), new(22, 0), TimeSpan.FromHours(1))];
+        _funcoes = [.. Dados.Funcoes];
+    }
+
+    static string Resumo(Turno t)
+    {
+        var a = Alocacao.Trabalho(Guid.Empty, Loja.Hoje, t.Inicio, t.Fim, t.Intervalo);
+        var noturno = a.Noturno > TimeSpan.Zero ? " · inclui hora noturna" : "";
+        return $"{Formatos.Horas(a.HorasComputadas)} de trabalho{noturno}{(t.Fim <= t.Inicio ? " · termina no dia seguinte" : "")}";
+    }
+
+    void MudarTurno(Turno t, Func<Turno, Turno> mudanca)
+    {
+        var i = _turnos.IndexOf(t);
+        if (i >= 0) _turnos[i] = mudanca(t);
+    }
+
+    void MudarHora(Turno t, object? valor, Func<TimeOnly, Turno> mudanca)
+    {
+        if (TimeOnly.TryParse(valor?.ToString(), out var h)) MudarTurno(t, _ => mudanca(h));
+    }
+
+    void NovoTurno() => _turnos.Add(new(Guid.NewGuid(), $"Turno {_turnos.Count + 1}", new(9, 0), new(17, 20), TimeSpan.FromHours(1)));
+
+    void Renomear(Funcao f, string? nome)
+    {
+        var i = _funcoes.IndexOf(f);
+        if (i >= 0 && !string.IsNullOrWhiteSpace(nome)) _funcoes[i] = f with { Nome = nome.Trim() };
+    }
+
+    void NovaFuncao()
+    {
+        if (string.IsNullOrWhiteSpace(_novaFuncao)) return;
+        _funcoes.Add(new(Guid.NewGuid(), _novaFuncao.Trim()));
+        _novaFuncao = "";
+    }
+
+    async Task Salvar()
+    {
+        var turnos = _turnos.Where(t => !string.IsNullOrWhiteSpace(t.Nome)).ToList();
+        var idsTurnos = turnos.Select(t => t.Id).ToHashSet();
+        var idsFuncoes = _funcoes.Select(f => f.Id).ToHashSet();
+        var ok = await Loja.Alterar(d => d with
+        {
+            Turnos = turnos,
+            Funcoes = [.. _funcoes],
+            // tira referências a turnos/funções removidos
+            Demandas = [.. d.Demandas.Where(x => idsTurnos.Contains(x.TurnoId) && (x.FuncaoId is null || idsFuncoes.Contains(x.FuncaoId.Value)))],
+            Funcionarios = [.. d.Funcionarios.Select(f => f with
+            {
+                Funcoes = f.Funcoes?.Where(idsFuncoes.Contains).ToList() is { Count: > 0 } fs ? fs : null,
+                Turnos = f.Turnos?.Where(idsTurnos.Contains).ToList() is { Count: > 0 } ts ? ts : null,
+                TurnoPrincipal = f.TurnoPrincipal is { } p && idsTurnos.Contains(p) ? p : null,
+            })],
+        }, AoSalvar.HasDelegate ? null : "Turnos e funções salvos.");
+        if (ok) await AoSalvar.InvokeAsync();
+    }
+}

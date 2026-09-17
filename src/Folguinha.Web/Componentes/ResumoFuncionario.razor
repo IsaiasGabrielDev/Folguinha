@@ -1,0 +1,77 @@
+@inherits PaginaBase
+
+<section class="pilha" aria-label="Resumo do mês">
+    <div class="linha" style="gap: .875rem;">
+        <span class="avatar grande @Formatos.ClasseAvatar(Funcionario.Id)" aria-hidden="true">@Formatos.Iniciais(Funcionario.Nome)</span>
+        <div class="cresce">
+            <p class="ajuda">@string.Join(" · ", new[] { Funcionario.Cargo, Formatos.Regime(Funcionario.Regime), $"{Formatos.Horas(Funcionario.CargaSemanal)} por semana" }.Where(x => !string.IsNullOrWhiteSpace(x)))</p>
+            <div class="linha" style="margin-top: .375rem;">
+                @if (Funcionario.TurnoPrincipal is { } tp && Dados.Turnos.FirstOrDefault(t => t.Id == tp) is { } turno)
+                {
+                    <span class="chip @Formatos.ClasseTurno(Dados, tp)">Turno: @turno.Nome.ToLowerInvariant()</span>
+                }
+                @if (Funcionario.FolgaExtra is { } fe)
+                {
+                    <span class="chip">+@fe.Quantidade folga a cada @fe.ACadaSemanas sem.</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (_escala is null)
+    {
+        <p class="ajuda">Ainda não há escala com essa pessoa.</p>
+    }
+    else
+    {
+        <div class="grade-3">
+            <div class="cartao compacto estatistica"><strong>@Formatos.Horas(_horas)</strong><span>no período</span></div>
+            <div class="cartao compacto estatistica"><strong>@_domingosFolga</strong><span>domingos de folga</span></div>
+            <div class="cartao compacto estatistica"><strong>@_feriadosTrabalhados</strong><span>feriados trabalhados</span></div>
+        </div>
+        <div class="cartao">
+            <div class="linha entre">
+                <h2>@Formatos.Periodo(_escala)</h2>
+                <a class="botao texto pequeno" href="@($"escala?id={_escala.Id}")">Ver escala</a>
+            </div>
+            <div class="calendario" role="list" aria-label="Dias da escala">
+                @foreach (var d in Formatos.Semana)
+                {
+                    <span class="dow" aria-hidden="true">@Formatos.DiaSemanaCurto(d)[..1]</span>
+                }
+                @for (var i = 0; i < ((int)_escala.Inicio.DayOfWeek + 6) % 7; i++)
+                {
+                    <span aria-hidden="true"></span>
+                }
+                @for (var dia = _escala.Inicio; dia <= _escala.Fim; dia = dia.AddDays(1))
+                {
+                    var a = _escala.Atual.FirstOrDefault(x => x.FuncionarioId == Funcionario.Id && x.Data == dia);
+                    var feriado = Dados.Feriados.Any(f => f.Considerado && f.Data == dia);
+                    <div role="listitem" class="dia @Formatos.ClasseTurno(Dados, a) @(feriado ? "feriado" : "")"
+                         aria-label="@($"{Formatos.Dia(dia)}: {Escalas.Descrever(Dados, a)}{(feriado ? ", feriado" : "")}")">
+                        <strong>@dia.Day</strong><span>@(a is { Tipo: TipoAlocacao.Folga } ? "folga" : Formatos.Sigla(Dados, a))</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Funcionario Funcionario { get; set; } = default!;
+
+    Escala? _escala;
+    TimeSpan _horas;
+    int _domingosFolga, _feriadosTrabalhados;
+
+    protected override void OnParametersSet()
+    {
+        _escala = Dados.EscalaDoDia(Loja.Hoje) ?? Dados.Escalas.Where(e => e.Atual.Any(a => a.FuncionarioId == Funcionario.Id)).MaxBy(e => e.Inicio);
+        if (_escala is null) return;
+        var minhas = _escala.Atual.Where(a => a.FuncionarioId == Funcionario.Id).ToList();
+        _horas = minhas.Where(a => a.Trabalha).Aggregate(TimeSpan.Zero, (t, a) => t + a.HorasComputadas);
+        _domingosFolga = minhas.Count(a => !a.Trabalha && a.Data.DayOfWeek == DayOfWeek.Sunday);
+        var feriados = Dados.Feriados.Where(f => f.Considerado).Select(f => f.Data).ToHashSet();
+        _feriadosTrabalhados = minhas.Count(a => a.Trabalha && feriados.Contains(a.Data));
+    }
+}

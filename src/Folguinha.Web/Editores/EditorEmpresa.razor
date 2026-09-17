@@ -1,0 +1,51 @@
+@inherits PaginaBase
+
+<form class="pilha" @onsubmit="Salvar" @onsubmit:preventDefault>
+    <label class="campo">
+        Nome da empresa
+        <input @bind="_nome" required maxlength="80" autocomplete="organization" />
+    </label>
+    <label class="campo">
+        Unidade <span class="dica">Opcional, ex.: "Centro" ou "Shopping Norte"</span>
+        <input @bind="_unidade" maxlength="60" />
+    </label>
+    <fieldset>
+        <legend>Ramo</legend>
+        <label class="marcador"><input type="radio" name="ramo" checked="@(_ramo == RamoAtividade.Comercio)" @onchange="() => _ramo = RamoAtividade.Comercio" /> Comércio (domingo de folga a cada 3 semanas)</label>
+        <label class="marcador"><input type="radio" name="ramo" checked="@(_ramo == RamoAtividade.Outro)" @onchange="() => _ramo = RamoAtividade.Outro" /> Outra atividade (a cada 7 semanas)</label>
+    </fieldset>
+    <label class="campo">
+        Seu nome <span class="dica">Aparece como responsável nas versões publicadas</span>
+        <input @bind="_gestor" required maxlength="60" autocomplete="name" />
+    </label>
+    <button class="botao primario" type="submit" disabled="@string.IsNullOrWhiteSpace(_nome)">@TextoBotao</button>
+</form>
+
+@code {
+    [Parameter] public string TextoBotao { get; set; } = "Salvar";
+    [Parameter] public EventCallback AoSalvar { get; set; }
+
+    string _nome = "", _unidade = "", _gestor = "";
+    RamoAtividade _ramo = RamoAtividade.Comercio;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _nome = Dados.Empresa?.Nome ?? "";
+        _ramo = Dados.Empresa?.Ramo ?? RamoAtividade.Comercio;
+        _unidade = Dados.NomeUnidade;
+        _gestor = Dados.NomeGestor == "Gerente" ? "" : Dados.NomeGestor;
+    }
+
+    async Task Salvar()
+    {
+        if (string.IsNullOrWhiteSpace(_nome)) return;
+        var ok = await Loja.Alterar(d => d with
+        {
+            Empresa = new Empresa(d.Empresa?.Id ?? Guid.NewGuid(), _nome.Trim(), _ramo),
+            NomeUnidade = _unidade.Trim(),
+            NomeGestor = string.IsNullOrWhiteSpace(_gestor) ? "Gerente" : _gestor.Trim(),
+        }, AoSalvar.HasDelegate ? null : "Empresa salva.");
+        if (ok) await AoSalvar.InvokeAsync();
+    }
+}

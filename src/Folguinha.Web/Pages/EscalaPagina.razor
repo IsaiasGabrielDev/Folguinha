@@ -1,0 +1,327 @@
+@page "/escala"
+@using Folguinha.Domain.Regras
+@inherits PaginaBase
+
+<PageTitle>Escala · Folguinha</PageTitle>
+
+@if (_escala is null)
+{
+    <Cabecalho Titulo="Escala" />
+    <Vazio Icone="escala" Titulo="Nenhuma escala ainda" Texto="Gere o rascunho do período, revise os avisos e publique.">
+        <button class="botao primario" @onclick="() => _gerar = true"><Icone Nome="gerar" Tamanho="20" Traco="2" /> Gerar escala</button>
+    </Vazio>
+}
+else
+{
+    <Cabecalho Titulo="@Formatos.Periodo(_escala)" Subtitulo="Escala">
+        <Acoes>
+            <div class="linha">
+                <span class="chip @Formatos.ClasseEstado(_escala)">@Formatos.Estado(_escala, Bloqueios == 0)</span>
+                @if (_escala.Rascunho is not null && !_escala.Encerrada)
+                {
+                    <button class="botao primario pequeno" disabled="@_validando" @onclick="() => _publicar = true">Publicar</button>
+                }
+            </div>
+        </Acoes>
+    </Cabecalho>
+
+    <div class="linha entre">
+        @if (Dados.Escalas.Count > 1)
+        {
+            <label class="campo" style="flex: 1 1 12rem;">
+                <span class="sr-only">Escolher escala</span>
+                <select value="@_escala.Id" @onchange="TrocarEscala">
+                    @foreach (var e in Dados.Escalas.OrderByDescending(e => e.Inicio))
+                    {
+                        <option value="@e.Id">@Formatos.Periodo(e) · @Formatos.Estado(e, true)</option>
+                    }
+                </select>
+            </label>
+        }
+        <div class="linha">
+            <button class="botao pequeno" @onclick="() => _gerar = true"><Icone Nome="mais-um" Tamanho="16" /> Nova</button>
+            <button class="botao pequeno" @onclick="() => _mais = true" aria-haspopup="dialog">Opções</button>
+        </div>
+    </div>
+
+    <div class="segmentado" role="group" aria-label="Visualização">
+        @foreach (var (v, rotulo) in Vistas)
+        {
+            var vista = v;
+            <button type="button" aria-pressed="@((_vista == vista) ? "true" : "false")" @onclick="() => MudarVista(vista)">@rotulo</button>
+        }
+    </div>
+
+    <div class="linha entre">
+        <button class="botao pequeno" aria-label="Período anterior" disabled="@(InicioVista <= _escala.Inicio)" @onclick="() => Andar(-1)"><Icone Nome="esquerda" Tamanho="20" /></button>
+        <strong style="font-family: var(--fonte-titulo); font-weight: 500;">@Formatos.Dia(Dias[0]) – @Formatos.Dia(Dias[^1])</strong>
+        <button class="botao pequeno" aria-label="Próximo período" disabled="@(Dias[^1] >= _escala.Fim)" @onclick="() => Andar(1)"><Icone Nome="direita" Tamanho="20" /></button>
+    </div>
+
+    @if (Setores.Count > 1 || Dados.Funcoes.Count > 0)
+    {
+        <div class="grade-2">
+            @if (Setores.Count > 1)
+            {
+                <label class="campo">Setor
+                    <select @bind="_setor">
+                        <option value="">Todos</option>
+                        @foreach (var s in Setores)
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    </select>
+                </label>
+            }
+            @if (Dados.Funcoes.Count > 0)
+            {
+                <label class="campo">Função
+                    <select @bind="_funcao">
+                        <option value="">Todas</option>
+                        @foreach (var f in Dados.Funcoes)
+                        {
+                            <option value="@f.Id">@f.Nome</option>
+                        }
+                    </select>
+                </label>
+            }
+        </div>
+    }
+
+    <div class="legenda" aria-label="Legenda">
+        @foreach (var t in Dados.Turnos)
+        {
+            <span class="chip @Formatos.ClasseTurno(Dados, t.Id)">@Formatos.Sigla(t.Nome) = @t.Nome</span>
+        }
+        <span class="chip cel-folga">F = Folga</span>
+        <span class="chip cel-ausencia">A = Ausência</span>
+    </div>
+
+    <GradeEscala Dados="Dados" Escala="_escala" Dias="Dias" Pessoas="Pessoas" Violacoes="_violacoes"
+                 Selecionada="@(_pessoa is null ? null : (_pessoa.Id, _dia))" AoSelecionar="Selecionar" />
+
+    <section class="pilha" aria-labelledby="avisos-titulo">
+        <div class="secao">
+            <h2 id="avisos-titulo">Avisos</h2>
+            <span class="contagem" role="status">@(_validando ? "validando…" : Resumo)</span>
+        </div>
+        @if (!_validando && _violacoes.Count == 0)
+        {
+            <p class="nota ok"><Icone Nome="ok" Tamanho="18" /> Nenhum aviso: a escala atende todas as regras.</p>
+        }
+        @foreach (var v in _violacoes.Take(_limite))
+        {
+            var violacao = v;
+            <AvisoRegra Violacao="v">
+                <Acao>
+                    @if (v.FuncionarioId is { } fid && v.Data is { } d && Dados.Funcionario(fid) is { } pessoa)
+                    {
+                        <button class="botao texto pequeno" @onclick="() => IrPara(pessoa, d)">Ajustar</button>
+                    }
+                    else if (v.Data is { } dia)
+                    {
+                        <button class="botao texto pequeno" @onclick="() => IrParaDia(dia)">Ver dia</button>
+                    }
+                </Acao>
+            </AvisoRegra>
+        }
+        @if (_violacoes.Count > _limite)
+        {
+            <button class="botao" @onclick="() => _limite += 20">Mostrar mais (@(_violacoes.Count - _limite))</button>
+        }
+    </section>
+}
+
+<FolhaCelula Funcionario="_pessoa" Dia="_dia" Escala="_escala" Violacoes="_violacoes"
+             AoFechar="() => _pessoa = null" AoAjustar="AoAjustar" />
+<FolhaGerar Aberta="_gerar" AoFechar="() => _gerar = false" AoGerar="AoGerar" />
+<FolhaPublicar Aberta="_publicar" Escala="_escala" Violacoes="_violacoes" AoFechar="() => _publicar = false" AoPublicar="AoPublicar" />
+
+<Folha Aberta="_mais" Titulo="Opções da escala" AoFechar="() => _mais = false">
+    @if (_escala is not null)
+    {
+        <div class="pilha">
+            <a class="botao" href="@($"exportar?id={_escala.Id}")"><Icone Nome="planilha" Tamanho="18" /> Exportar planilhas</a>
+            <a class="botao" href="@($"historico?id={_escala.Id}")"><Icone Nome="historico" Tamanho="18" /> Histórico de versões</a>
+            @if (!_escala.Encerrada)
+            {
+                <button class="botao" @onclick="Regerar"><Icone Nome="gerar" Tamanho="18" /> Gerar de novo (mantém ajustes manuais)</button>
+                @if (_escala.Rascunho is not null)
+                {
+                    <button class="botao perigo" @onclick="Descartar"><Icone Nome="lixo" Tamanho="18" /> @(_escala.Versoes.Count == 0 ? "Apagar rascunho" : "Descartar alterações")</button>
+                }
+                else if (_escala.Versoes.Count > 0)
+                {
+                    <button class="botao" @onclick="Encerrar"><Icone Nome="cadeado" Tamanho="18" /> Encerrar escala</button>
+                    <p class="ajuda pequeno">Encerrada, a escala não aceita mais ajustes.</p>
+                }
+            }
+        </div>
+    }
+</Folha>
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")] public Guid? IdPedido { get; set; }
+    [SupplyParameterFromQuery(Name = "gerar")] public int? GerarPedido { get; set; }
+
+    enum Vista { Semana, Quinzena, Mes }
+
+    static readonly (Vista, string)[] Vistas = [(Vista.Semana, "Semana"), (Vista.Quinzena, "Quinzena"), (Vista.Mes, "Mês")];
+
+    Guid? _idEscala;
+
+    Escala? _escala => _idEscala is { } idEscala ? Dados.Escala(idEscala) : null;
+    Vista _vista = Vista.Semana;
+    DateOnly _inicioVista;
+    IReadOnlyList<Violacao> _violacoes = [];
+    bool _validando, _gerar, _publicar, _mais;
+    Funcionario? _pessoa;
+    DateOnly _dia;
+    string _setor = "", _funcao = "";
+    int _limite = 20;
+    Guid? _validada;
+
+    DateOnly InicioVista => _vista == Vista.Mes || _escala is null ? _escala?.Inicio ?? Loja.Hoje : _inicioVista;
+
+    List<DateOnly> Dias
+    {
+        get
+        {
+            if (_escala is null) return [Loja.Hoje];
+            var tamanho = _vista switch { Vista.Semana => 7, Vista.Quinzena => 15, _ => 62 };
+            var inicio = InicioVista < _escala.Inicio ? _escala.Inicio : InicioVista;
+            return [.. Enumerable.Range(0, tamanho).Select(inicio.AddDays).Where(d => d <= _escala.Fim)];
+        }
+    }
+
+    List<string> Setores => [.. Dados.Funcionarios.Select(f => f.Setor).OfType<string>().Distinct().Order()];
+
+    List<Funcionario> Pessoas => [.. Dados.Funcionarios
+        .Where(f => _setor == "" || f.Setor == _setor)
+        .Where(f => _funcao == "" || (Guid.TryParse(_funcao, out var fn) && f.TemFuncao(fn)))
+        .OrderBy(f => f.Setor ?? "").ThenBy(f => f.Nome, StringComparer.CurrentCulture)];
+
+    int Bloqueios => _violacoes.Count(v => v.Severidade == Severidade.Bloqueio);
+
+    string Resumo => _violacoes.Count == 0 ? "" : string.Join(" · ", _violacoes.GroupBy(v => v.Severidade).OrderBy(g => g.Key)
+        .Select(g => $"{g.Count()} {Formatos.Severidade(g.Key).ToLowerInvariant()}"));
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _idEscala = ((IdPedido is { } id ? Dados.Escala(id) : null)
+                     ?? Dados.EscalaDoDia(Loja.Hoje)
+                     ?? Dados.Escalas.Where(e => e.Inicio > Loja.Hoje).MinBy(e => e.Inicio)
+                     ?? Dados.Escalas.MaxBy(e => e.Fim))?.Id;
+        if (GerarPedido == 1 && Dados.Escalas.Count == 0) _gerar = true;
+        if (_escala is not null && _validada != _escala.Id)
+        {
+            _inicioVista = _escala.Cobre(Loja.Hoje) ? Formatos.Segunda(Loja.Hoje) : _escala.Inicio;
+            await Validar();
+        }
+    }
+
+    async Task Validar()
+    {
+        if (_escala is null) return;
+        _validando = true;
+        StateHasChanged();
+        await Respirar();
+        _violacoes = _escala is null ? [] : Escalas.Validar(Dados, _escala);
+        _validada = _escala?.Id;
+        _validando = false;
+    }
+
+    void MudarVista(Vista v)
+    {
+        _vista = v;
+        if (_escala is not null && v != Vista.Mes && !(_inicioVista >= _escala.Inicio && _inicioVista <= _escala.Fim)) _inicioVista = _escala.Inicio;
+    }
+
+    void Andar(int direcao)
+    {
+        var passo = _vista == Vista.Semana ? 7 : 15;
+        _inicioVista = InicioVista.AddDays(direcao * passo);
+    }
+
+    void TrocarEscala(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id)) Nav.NavigateTo($"escala?id={id}");
+    }
+
+    void Selecionar((Funcionario Pessoa, DateOnly Dia) sel)
+    {
+        _pessoa = sel.Pessoa;
+        _dia = sel.Dia;
+    }
+
+    void IrPara(Funcionario pessoa, DateOnly dia)
+    {
+        IrParaDia(dia);
+        Selecionar((pessoa, dia));
+    }
+
+    void IrParaDia(DateOnly dia)
+    {
+        if (_vista != Vista.Mes) _inicioVista = _vista == Vista.Semana ? Formatos.Segunda(dia) : dia;
+        _setor = "";
+        _funcao = "";
+    }
+
+    void AoAjustar(IReadOnlyList<Violacao> violacoes)
+    {
+        _violacoes = violacoes;
+    }
+
+    Task AoGerar(Escala escala)
+    {
+        _gerar = false;
+        _validada = null;
+        Nav.NavigateTo($"escala?id={escala.Id}");
+        return _escala?.Id == escala.Id ? Validar() : Task.CompletedTask;
+    }
+
+    async Task AoPublicar()
+    {
+        _publicar = false;
+        await Validar();
+    }
+
+    async Task Regerar()
+    {
+        if (_escala is null) return;
+        _mais = false;
+        _validando = true;
+        StateHasChanged();
+        await Respirar();
+        try
+        {
+            var r = Escalas.Gerar(Dados, _escala.Inicio, _escala.Fim);
+            await Loja.Substituir(r.Dados, "Rascunho gerado de novo.");
+        }
+        catch (EscalaException e)
+        {
+            Loja.Avisar(e.Message, erro: true);
+        }
+        await Validar();
+    }
+
+    async Task Descartar()
+    {
+        if (_escala is null) return;
+        _mais = false;
+        var apagar = _escala.Versoes.Count == 0;
+        if (await Loja.Alterar(d => Escalas.DescartarRascunho(d, _escala.Id), apagar ? "Rascunho apagado." : "Alterações descartadas."))
+        {
+            _validada = null;
+            if (apagar) Nav.NavigateTo("escala", replace: true);
+            else await Validar();
+        }
+    }
+
+    async Task Encerrar()
+    {
+        if (_escala is null) return;
+        _mais = false;
+        if (await Loja.Alterar(d => Escalas.Encerrar(d, _escala.Id), "Escala encerrada.")) await Validar();
+    }
+}

@@ -1,0 +1,172 @@
+@inherits PaginaBase
+@* Nova escala: período + última folga de quem ainda não tem histórico. *@
+
+<Folha Aberta="Aberta" Titulo="Gerar escala" AoFechar="AoFechar">
+    <fieldset>
+        <legend>Período</legend>
+        <div class="segmentado" role="group" aria-label="Tipo de período">
+            @foreach (var (tipo, rotulo) in Tipos)
+            {
+                var t = tipo;
+                <button type="button" aria-pressed="@((_tipo == t) ? "true" : "false")" @onclick="() => MudarTipo(t)">@rotulo</button>
+            }
+        </div>
+    </fieldset>
+    <label class="campo">Começa em <input type="date" value="@_inicio.ToString("yyyy-MM-dd")" @onchange="MudarInicio" /></label>
+    <p class="ajuda">De <strong>@Formatos.Dia(_inicio)/@_inicio.Year</strong> a <strong>@Formatos.Dia(Fim)/@Fim.Year</strong> (@(Fim.DayNumber - _inicio.DayNumber + 1) dias)</p>
+
+    @if (Existente is { } e)
+    {
+        <p class="nota alerta">
+            <Icone Nome="info" Tamanho="18" />
+            <span>
+                @if (e.Inicio == _inicio && e.Fim == Fim)
+                {
+                    @($"Essa escala já existe. Gerar de novo refaz o rascunho mantendo os ajustes manuais.")
+                }
+                else
+                {
+                    @($"Já existe a escala de {Formatos.Periodo(e)}, que se sobrepõe a esse período.")
+                }
+            </span>
+        </p>
+    }
+
+    @if (SemHistorico.Count > 0)
+    {
+        <div class="pilha">
+            <h3>Última folga antes de @Formatos.Dia(_inicio)</h3>
+            <p class="ajuda pequeno">Essas pessoas ainda não têm escala no app. Informe a última folga para a nova escala respeitar os dias já trabalhados.</p>
+            @foreach (var f in SemHistorico)
+            {
+                var pessoa = f;
+                <label class="campo">
+                    @f.Nome
+                    <input type="date" max="@_inicio.AddDays(-1).ToString("yyyy-MM-dd")"
+                           value="@(_ultimas.GetValueOrDefault(f.Id)?.ToString("yyyy-MM-dd") ?? f.Situacao?.UltimaFolga.ToString("yyyy-MM-dd"))"
+                           @onchange="e => _ultimas[pessoa.Id] = DateOnly.TryParse(e.Value?.ToString(), out var d) ? d : null" />
+                </label>
+            }
+        </div>
+    }
+
+    @if (Pendencias.Count > 0)
+    {
+        <ul class="nota alerta" style="flex-direction: column; margin: 0; padding-left: 1.5rem;">
+            @foreach (var p in Pendencias)
+            {
+                <li>@p</li>
+            }
+        </ul>
+    }
+
+    <button type="button" class="botao primario" disabled="@(_gerando || Bloqueado)" @onclick="Gerar">
+        <Icone Nome="gerar" Tamanho="20" Traco="2" /> @(_gerando ? "Gerando… pode levar alguns segundos" : "Gerar rascunho")
+    </button>
+</Folha>
+
+@code {
+    [Parameter] public bool Aberta { get; set; }
+    [Parameter] public EventCallback AoFechar { get; set; }
+    [Parameter] public EventCallback<Escala> AoGerar { get; set; }
+
+    enum TipoPeriodo { Semana, Quinzena, Mes }
+
+    static readonly (TipoPeriodo, string)[] Tipos = [(TipoPeriodo.Semana, "Semana"), (TipoPeriodo.Quinzena, "Quinzena"), (TipoPeriodo.Mes, "Mês")];
+
+    TipoPeriodo _tipo = TipoPeriodo.Mes;
+    DateOnly _inicio;
+    bool _gerando, _aberta;
+    readonly Dictionary<Guid, DateOnly?> _ultimas = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Aberta && !_aberta) Sugerir();
+        _aberta = Aberta;
+    }
+
+    void Sugerir()
+    {
+        var ultima = Dados.Escalas.MaxBy(e => e.Fim);
+        if (ultima is null)
+        {
+            _tipo = TipoPeriodo.Mes;
+            _inicio = new DateOnly(Loja.Hoje.Year, Loja.Hoje.Month, 1);
+            return;
+        }
+        var duracao = ultima.Fim.DayNumber - ultima.Inicio.DayNumber + 1;
+        _tipo = duracao <= 7 ? TipoPeriodo.Semana : duracao <= 16 ? TipoPeriodo.Quinzena : TipoPeriodo.Mes;
+        _inicio = ultima.Fim.AddDays(1);
+        Ajustar();
+    }
+
+    void MudarTipo(TipoPeriodo t)
+    {
+        _tipo = t;
+        Ajustar();
+    }
+
+    void MudarInicio(ChangeEventArgs e)
+    {
+        if (!DateOnly.TryParse(e.Value?.ToString(), out var d)) return;
+        _inicio = d;
+        Ajustar();
+    }
+
+    /// Alinha o início ao tipo: semana começa na segunda; quinzena no dia 1 ou 16; mês no dia 1.
+    void Ajustar() => _inicio = _tipo switch
+    {
+        TipoPeriodo.Semana => Formatos.Segunda(_inicio),
+        TipoPeriodo.Quinzena => new DateOnly(_inicio.Year, _inicio.Month, _inicio.Day < 16 ? 1 : 16),
+        _ => new DateOnly(_inicio.Year, _inicio.Month, 1),
+    };
+
+    DateOnly Fim => _tipo switch
+    {
+        TipoPeriodo.Semana => _inicio.AddDays(6),
+        TipoPeriodo.Quinzena => _inicio.Day == 1 ? _inicio.AddDays(14) : new DateOnly(_inicio.Year, _inicio.Month, 1).AddMonths(1).AddDays(-1),
+        _ => _inicio.AddMonths(1).AddDays(-1),
+    };
+
+    Escala? Existente => Dados.Escalas.FirstOrDefault(e => e.Inicio <= Fim && e.Fim >= _inicio);
+
+    bool Bloqueado => Existente is { } e && (e.Inicio != _inicio || e.Fim != Fim || e.Encerrada) || Pendencias.Count > 0;
+
+    List<Funcionario> SemHistorico =>
+        [.. Dados.Funcionarios.Where(f => !Dados.Escalas.Any(e => e.Inicio < _inicio && e.Atual.Any(a => a.FuncionarioId == f.Id))).OrderBy(f => f.Nome)];
+
+    List<string> Pendencias => new[]
+    {
+        Dados.Funcionarios.Count == 0 ? "Cadastre a equipe (Equipe → Adicionar)." : null,
+        Dados.Turnos.Count == 0 ? "Cadastre os turnos (Mais → Turnos e funções)." : null,
+        Dados.Demandas.Count == 0 ? "Defina quantas pessoas por turno (Mais → Pessoas por turno)." : null,
+    }.OfType<string>().ToList();
+
+    async Task Gerar()
+    {
+        _gerando = true;
+        StateHasChanged();
+        await Respirar();
+        try
+        {
+            var dados = Dados with
+            {
+                Funcionarios = [.. Dados.Funcionarios.Select(f => _ultimas.GetValueOrDefault(f.Id) is { } u
+                    ? f with { Situacao = (f.Situacao ?? new SituacaoInicial(u)) with { UltimaFolga = u } }
+                    : f)],
+            };
+            var (novos, escala, violacoes) = Escalas.Gerar(dados, _inicio, Fim);
+            var bloqueios = violacoes.Count(v => v.Severidade == Domain.Regras.Severidade.Bloqueio);
+            await Loja.Substituir(novos, bloqueios == 0
+                ? "Rascunho gerado. Revise os avisos e publique."
+                : $"Rascunho gerado com {bloqueios} bloqueio(s) para resolver.");
+            _ultimas.Clear();
+            await AoGerar.InvokeAsync(escala);
+        }
+        catch (EscalaException e)
+        {
+            Loja.Avisar(e.Message, erro: true);
+        }
+        _gerando = false;
+    }
+}

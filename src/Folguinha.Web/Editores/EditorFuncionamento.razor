@@ -1,0 +1,111 @@
+@inherits PaginaBase
+
+<div class="pilha">
+    <div class="cartao">
+        <ul class="lista">
+            @foreach (var dia in Formatos.Semana)
+            {
+                var periodos = _periodos.Where(p => p.Dia == dia).ToList();
+                <li>
+                    <div class="item" style="align-items: flex-start;">
+                        <span class="nome" style="width: 5.5rem; padding-top: .6rem;">@Formatos.DiaSemana(dia)</span>
+                        <div class="cresce pilha" style="gap: .375rem;">
+                            @if (periodos.Count == 0)
+                            {
+                                <span class="ajuda" style="padding-top: .6rem;">Fechado</span>
+                            }
+                            @foreach (var p in periodos)
+                            {
+                                var atual = p;
+                                <div class="linha">
+                                    <input class="entrada" style="width: 7rem;" type="time" aria-label="@($"{Formatos.DiaSemana(dia)}: abre")"
+                                           value="@Formatos.Hora(atual.Abre)" @onchange="e => Mudar(atual, e.Value, true)" />
+                                    <span aria-hidden="true">–</span>
+                                    <input class="entrada" style="width: 7rem;" type="time" aria-label="@($"{Formatos.DiaSemana(dia)}: fecha")"
+                                           value="@Formatos.Hora(atual.Fecha)" @onchange="e => Mudar(atual, e.Value, false)" />
+                                    <button type="button" class="botao texto pequeno" aria-label="@($"Remover período de {Formatos.DiaSemana(dia)}")" @onclick="() => _periodos.Remove(atual)">
+                                        <Icone Nome="lixo" Tamanho="18" />
+                                    </button>
+                                </div>
+                            }
+                            <button type="button" class="botao texto pequeno" style="align-self: flex-start;" @onclick="() => Adicionar(dia)">
+                                <Icone Nome="mais-um" Tamanho="16" /> @(periodos.Count == 0 ? "Abrir neste dia" : "Outro período")
+                            </button>
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+        <p class="ajuda pequeno">Horário depois da meia-noite: use o fechamento menor que a abertura (ex.: 18:00 – 02:00).</p>
+    </div>
+
+    <div class="cartao">
+        <h2>Dias em que a loja não abre</h2>
+        <p class="ajuda">Datas específicas (inventário, reforma…). Nesses dias ninguém é escalado.</p>
+        <div class="linha">
+            <input class="entrada cresce" type="date" aria-label="Data fechada" @bind="_novaData" />
+            <button type="button" class="botao pequeno" disabled="@(_novaData is null)" @onclick="AdicionarData">Adicionar</button>
+        </div>
+        @if (_fechadas.Count > 0)
+        {
+            <ul class="lista">
+                @foreach (var d in _fechadas.Order())
+                {
+                    <li class="item">
+                        <span class="cresce">@Formatos.Dia(d)/@d.Year</span>
+                        <button type="button" class="botao texto pequeno" aria-label="@($"Remover {Formatos.Data(d)}")" @onclick="() => _fechadas.Remove(d)"><Icone Nome="lixo" Tamanho="18" /></button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+    <button class="botao primario" type="button" @onclick="Salvar">@TextoBotao</button>
+</div>
+
+@code {
+    [Parameter] public string TextoBotao { get; set; } = "Salvar";
+    [Parameter] public EventCallback AoSalvar { get; set; }
+
+    List<PeriodoFuncionamento> _periodos = [];
+    List<DateOnly> _fechadas = [];
+    DateOnly? _novaData;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _periodos = Dados.Funcionamento.Count > 0
+            ? [.. Dados.Funcionamento]
+            : [.. Formatos.Semana.Select(d => new PeriodoFuncionamento(d, new(8, 0), new(22, 0)))];
+        _fechadas = [.. Dados.DatasFechadas];
+    }
+
+    void Adicionar(DayOfWeek dia)
+    {
+        var ultimo = _periodos.LastOrDefault(p => p.Dia == dia);
+        _periodos.Add(ultimo is null ? new(dia, new(8, 0), new(18, 0)) : new(dia, ultimo.Fecha.AddHours(1), ultimo.Fecha.AddHours(4)));
+    }
+
+    void Mudar(PeriodoFuncionamento p, object? valor, bool abertura)
+    {
+        if (!TimeOnly.TryParse(valor?.ToString(), out var hora)) return;
+        var i = _periodos.IndexOf(p);
+        if (i >= 0) _periodos[i] = abertura ? p with { Abre = hora } : p with { Fecha = hora };
+    }
+
+    void AdicionarData()
+    {
+        if (_novaData is { } d && !_fechadas.Contains(d)) _fechadas.Add(d);
+        _novaData = null;
+    }
+
+    async Task Salvar()
+    {
+        var ok = await Loja.Alterar(d => d with
+        {
+            Funcionamento = [.. _periodos.OrderBy(p => (((int)p.Dia + 6) % 7, p.Abre))],
+            DatasFechadas = [.. _fechadas.Order()],
+        }, AoSalvar.HasDelegate ? null : "Horário salvo.");
+        if (ok) await AoSalvar.InvokeAsync();
+    }
+}

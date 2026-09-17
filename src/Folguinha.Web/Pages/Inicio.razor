@@ -1,0 +1,150 @@
+@page "/inicio"
+@inherits PaginaBase
+
+<PageTitle>Começar · Folguinha</PageTitle>
+
+<div class="passos">
+    <div class="linha entre ajuda pequeno">
+        <span>Passo @(Passo + 1) de @Titulos.Length</span>
+        @if (Passo > 0 && Passo < Titulos.Length - 1 && Dados.AceitouAviso && Dados.Empresa is not null)
+        {
+            <a href="@Link(Passo + 1)">Pular por agora</a>
+        }
+    </div>
+    <div class="progresso" role="progressbar" aria-valuemin="1" aria-valuemax="@Titulos.Length" aria-valuenow="@(Passo + 1)" aria-label="Progresso do cadastro">
+        <div style="width: @((Passo + 1) * 100 / Titulos.Length)%"></div>
+    </div>
+</div>
+
+<header class="pilha" style="gap: .375rem;">
+    <h1>@Titulos[Passo].Titulo</h1>
+    <p class="ajuda">@Titulos[Passo].Texto</p>
+</header>
+
+@switch (Passo)
+{
+    case 0:
+        <div class="cartao">
+            <p class="nota"><Icone Nome="info" Tamanho="18" /><span>O Folguinha ajuda a montar e validar escalas com base na CLT, mas <strong>não substitui</strong> o Departamento Pessoal, o contador ou a assessoria jurídica. Convenções coletivas podem mudar as regras.</span></p>
+            <p class="nota"><Icone Nome="cadeado" Tamanho="18" /><span>Nesta versão os dados ficam <strong>só neste aparelho</strong>. Instale o app na tela inicial e faça backup de vez em quando (Mais → Backup).</span></p>
+            <label class="marcador"><input type="checkbox" @bind="_entendi" /> Entendi</label>
+            <button class="botao primario" disabled="@(!_entendi)" @onclick="Aceitar">Começar cadastro</button>
+            <button class="botao" disabled="@(!_entendi)" @onclick="UsarExemplo">Explorar com uma loja de exemplo</button>
+        </div>
+        break;
+    case 1:
+        <div class="cartao"><EditorEmpresa TextoBotao="Continuar" AoSalvar="Proximo" /></div>
+        break;
+    case 2:
+        <EditorFuncionamento TextoBotao="Continuar" AoSalvar="Proximo" />
+        break;
+    case 3:
+        <EditorFuncoesTurnos TextoBotao="Continuar" AoSalvar="Proximo" />
+        break;
+    case 4:
+        <EditorFeriados TextoBotao="Continuar" AoSalvar="Proximo" />
+        break;
+    case 5:
+        <div class="cartao compacto">
+            @if (Dados.Funcionarios.Count == 0)
+            {
+                <p class="ajuda">Ninguém cadastrado ainda.</p>
+            }
+            <ul class="lista">
+                @foreach (var f in Dados.Funcionarios.OrderBy(f => f.Nome))
+                {
+                    <li>
+                        <a class="item cobre" href="@($"equipe/{f.Id}?volta=inicio%3Fpasso%3D6")">
+                            <span class="avatar mini @Formatos.ClasseAvatar(f.Id)" aria-hidden="true">@Formatos.Iniciais(f.Nome)</span>
+                            <span class="cresce"><span class="nome">@f.Nome</span> <span class="detalhe">· @Formatos.Regime(f.Regime)</span></span>
+                            @if (f.Situacao is null)
+                            {
+                                <span class="chip sev-atencao">Falta última folga</span>
+                            }
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+        <a class="botao" href="equipe/novo?volta=inicio%3Fpasso%3D6"><Icone Nome="mais-um" Tamanho="18" /> Adicionar pessoa</a>
+        <button class="botao primario" disabled="@(Dados.Funcionarios.Count == 0)" @onclick="Proximo">Continuar</button>
+        break;
+    case 6:
+        <EditorDemanda TextoBotao="Continuar" AoSalvar="Proximo" />
+        break;
+    default:
+        <div class="cartao">
+            <ul class="lista">
+                @foreach (var (ok, texto, link) in Checklist)
+                {
+                    <li class="item">
+                        <span class="chip @(ok ? "chip-verde" : "sev-atencao")">@(ok ? "Ok" : "Falta")</span>
+                        <a class="cresce" href="@link">@texto</a>
+                    </li>
+                }
+            </ul>
+        </div>
+        <a class="botao primario" href="escala?gerar=1"><Icone Nome="gerar" Tamanho="20" Traco="2" /> Gerar a primeira escala</a>
+        <a class="botao" href="">Ir para o painel</a>
+        break;
+}
+
+@if (Passo > 0)
+{
+    <a class="botao texto" href="@Link(Passo - 1)">Voltar ao passo anterior</a>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "passo")] public int? PassoPedido { get; set; }
+
+    static readonly (string Titulo, string Texto)[] Titulos =
+    [
+        ("Boas-vindas ao Folguinha", "Em poucos passos você cadastra a loja e gera a primeira escala."),
+        ("Sua empresa", "O ramo define a regra de domingos de folga."),
+        ("Quando a loja abre?", "Usamos esses horários para saber em que dias há escala."),
+        ("Turnos e funções", "Os horários de trabalho da equipe."),
+        ("Feriados", "Nacionais vêm da internet; adicione os municipais e estaduais."),
+        ("Equipe", "Cadastre as pessoas e a última folga de cada uma."),
+        ("Quantas pessoas por turno?", "Coloque menos gente nos dias mais tranquilos, como o fim de semana."),
+        ("Tudo pronto", "Confira o que falta e gere a escala."),
+    ];
+
+    bool _entendi;
+
+    int Passo => Math.Clamp(PassoPedido ?? 0, 0, Titulos.Length - 1);
+
+    static string Link(int passo) => passo <= 0 ? "inicio" : $"inicio?passo={passo}";
+
+    protected override void OnParametersSet()
+    {
+        _entendi = Dados.AceitouAviso;
+        // sem empresa, só o passo 0 e o 1 fazem sentido
+        if (Passo > 1 && (Dados.Empresa is null || !Dados.AceitouAviso)) Nav.NavigateTo(Link(Dados.AceitouAviso ? 1 : 0), replace: true);
+    }
+
+    void Proximo() => Nav.NavigateTo(Link(Passo + 1));
+
+    async Task Aceitar()
+    {
+        await Loja.Alterar(d => d with { AceitouAviso = true });
+        Proximo();
+    }
+
+    async Task UsarExemplo()
+    {
+        var inicio = new DateOnly(Loja.Hoje.Year, Loja.Hoje.Month, 1);
+        await Loja.Substituir(Exemplo.Loja(inicio) with { NomeGestor = Dados.NomeGestor }, "Loja de exemplo criada.");
+        Nav.NavigateTo(Link(Titulos.Length - 1));
+    }
+
+    IEnumerable<(bool Ok, string Texto, string Link)> Checklist =>
+    [
+        (Dados.Empresa is not null, "Empresa cadastrada", Link(1)),
+        (Dados.Funcionamento.Count > 0, "Horário de funcionamento", Link(2)),
+        (Dados.Turnos.Count > 0, $"{Dados.Turnos.Count} turno(s)", Link(3)),
+        (Dados.Feriados.Count > 0, $"{Dados.Feriados.Count(f => f.Considerado)} feriado(s) considerados", Link(4)),
+        (Dados.Funcionarios.Count > 0, $"{Dados.Funcionarios.Count} pessoa(s) na equipe", Link(5)),
+        (Dados.Funcionarios.All(f => f.Situacao is not null), "Última folga de todos informada", Link(5)),
+        (Dados.Demandas.Count > 0, "Pessoas por turno definidas", Link(6)),
+    ];
+}

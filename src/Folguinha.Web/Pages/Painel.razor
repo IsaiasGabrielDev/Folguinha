@@ -1,0 +1,150 @@
+@page "/"
+@using Folguinha.Domain.Regras
+@inherits PaginaBase
+
+<PageTitle>Painel · Folguinha</PageTitle>
+
+<Cabecalho Titulo="@TituloMes"
+           Subtitulo="@($"{Dados.Empresa?.Nome}{(string.IsNullOrWhiteSpace(Dados.NomeUnidade) ? "" : $" · {Dados.NomeUnidade}")} · Olá, {Dados.NomeGestor}")">
+    <Acoes>
+        <span class="avatar @Formatos.ClasseAvatar(Dados.Empresa?.Id ?? Guid.Empty)" aria-hidden="true">@Formatos.Iniciais(Dados.NomeGestor)</span>
+    </Acoes>
+</Cabecalho>
+
+@if (_escala is null)
+{
+    <Vazio Icone="escala" Titulo="Sem escala para este período" Texto="Gere o rascunho, revise os avisos e publique para a equipe.">
+        <a class="botao primario" href="escala?gerar=1"><Icone Nome="gerar" Tamanho="20" Traco="2" /> Gerar escala</a>
+    </Vazio>
+}
+else
+{
+    <div class="linha">
+        <a class="chip @Formatos.ClasseEstado(_escala)" href="@($"escala?id={_escala.Id}")">@Formatos.Periodo(_escala) · @Formatos.Estado(_escala, Bloqueios == 0)</a>
+        @if (PessoasSemSituacao > 0)
+        {
+            <a class="chip sev-atencao" href="equipe">@PessoasSemSituacao sem última folga</a>
+        }
+    </div>
+
+    <section class="cartao" aria-labelledby="cobertura-titulo">
+        <div class="secao">
+            <h2 id="cobertura-titulo">Cobertura da semana</h2>
+            <span class="contagem">@Formatos.Dia(Semana[0]) – @Formatos.Dia(Semana[^1])</span>
+        </div>
+        <div class="dias-cobertura">
+            @foreach (var d in Semana)
+            {
+                var (escalados, minimo) = Cobertura(d);
+                var falta = _violacoes.Any(v => v.RegraId == CoberturaMinima.Padrao.Id && v.Data == d);
+                var feriado = Dados.Feriados.FirstOrDefault(f => f.Considerado && f.Data == d);
+                <div class="@(falta ? "falta" : "")" title="@feriado?.Nome">
+                    <span style="@(feriado is null ? "" : "color: var(--coral-tinta);")">@Formatos.DiaSemanaCurto(d.DayOfWeek)</span>
+                    <strong>@d.Day</strong>
+                    <em>@(falta ? "falta" : minimo == 0 ? "–" : $"{escalados}/{minimo}")</em>
+                    <span class="sr-only">@(falta ? "falta gente" : "cobertura ok")@(feriado is null ? "" : $", feriado {feriado.Nome}")</span>
+                </div>
+            }
+        </div>
+        <p class="ajuda pequeno">Escalados / mínimo · “falta” = turno ou função sem cobertura@(Semana.Any(d => Dados.Feriados.Any(f => f.Considerado && f.Data == d)) ? " · dia em coral é feriado" : "")</p>
+    </section>
+
+    <section class="pilha" aria-labelledby="atencao-titulo">
+        <div class="secao">
+            <h2 id="atencao-titulo">Precisa de atenção</h2>
+            <span class="contagem" role="status">@(_validando ? "verificando…" : $"{Importantes.Count} aviso(s)")</span>
+        </div>
+        @if (!_validando && Importantes.Count == 0)
+        {
+            <p class="nota ok"><Icone Nome="ok" Tamanho="18" /> Tudo certo com a escala.</p>
+        }
+        @foreach (var v in Importantes.Take(4))
+        {
+            <AvisoRegra Violacao="v">
+                <Acao><a class="botao texto pequeno" href="@($"escala?id={_escala.Id}")">Resolver</a></Acao>
+            </AvisoRegra>
+        }
+        @if (Importantes.Count > 4)
+        {
+            <a class="botao" href="@($"escala?id={_escala.Id}")">Ver todos os avisos</a>
+        }
+    </section>
+
+    @if (Hoje.Count > 0)
+    {
+        <section class="cartao" aria-labelledby="hoje-titulo">
+            <h2 id="hoje-titulo">Hoje · @Formatos.Dia(Loja.Hoje)</h2>
+            <ul class="lista">
+                @foreach (var a in Hoje)
+                {
+                    var f = Dados.Funcionario(a.FuncionarioId);
+                    <li class="item">
+                        <span class="chip @Formatos.ClasseTurno(Dados, a)">@Formatos.Sigla(Dados, a)</span>
+                        <span class="cresce">@f?.Nome</span>
+                        <span class="detalhe">@Escalas.Descrever(Dados, a)</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+}
+
+<div class="acoes">
+    <a class="botao" href="ocorrencias/nova"><Icone Nome="ocorrencias" Tamanho="18" /> Nova ocorrência</a>
+    <a class="botao" href="exportar"><Icone Nome="planilha" Tamanho="18" /> Exportar</a>
+</div>
+
+@if (_escala is not null)
+{
+    <div class="espaco-flutuante" aria-hidden="true"></div>
+    <a class="botao primario flutuante" href="escala?gerar=1"><Icone Nome="gerar" Tamanho="20" Traco="2" /> @(ProximaNaoExiste ? "Gerar próxima" : "Nova escala")</a>
+}
+
+@code {
+    Escala? _escala;
+    IReadOnlyList<Violacao> _violacoes = [];
+
+    static string TituloMes => char.ToUpperInvariant(Formatos.Mes(Loja.Hoje)[0]) + Formatos.Mes(Loja.Hoje)[1..];
+    bool _validando;
+
+    List<DateOnly> Semana
+    {
+        get
+        {
+            var inicio = _escala is not null && !_escala.Cobre(Loja.Hoje) ? Formatos.Segunda(_escala.Inicio) : Formatos.Segunda(Loja.Hoje);
+            return [.. Enumerable.Range(0, 7).Select(inicio.AddDays)];
+        }
+    }
+
+    int Bloqueios => _violacoes.Count(v => v.Severidade == Severidade.Bloqueio);
+
+    List<Violacao> Importantes => [.. _violacoes.Where(v => v.Severidade != Severidade.Informativo)];
+
+    List<Alocacao> Hoje => [.. (_escala?.Atual ?? []).Where(a => a.Data == Loja.Hoje && a.Trabalha).OrderBy(a => a.Inicio)];
+
+    int PessoasSemSituacao => Dados.Funcionarios.Count(f => f.Situacao is null && !Dados.Escalas.Any(e => e.Atual.Any(a => a.FuncionarioId == f.Id)));
+
+    bool ProximaNaoExiste => _escala is not null && !Dados.Escalas.Any(e => e.Inicio > _escala.Fim);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _escala = Dados.EscalaDoDia(Loja.Hoje)
+                  ?? Dados.Escalas.Where(e => e.Inicio > Loja.Hoje).MinBy(e => e.Inicio)
+                  ?? Dados.Escalas.MaxBy(e => e.Fim);
+        if (_escala is null) return;
+        _validando = true;
+        StateHasChanged();
+        await Respirar();
+        _violacoes = Escalas.Validar(Dados, _escala);
+        _validando = false;
+    }
+
+    (int Escalados, int Minimo) Cobertura(DateOnly dia)
+    {
+        if (_escala is null || !_escala.Cobre(dia)) return (0, 0);
+        var minimo = Demanda.Aplicaveis(Dados.Demandas, dia).GroupBy(d => d.TurnoId)
+            .Sum(g => Math.Max(g.Where(d => d.FuncaoId is null).Sum(d => d.Minimo), g.Where(d => d.FuncaoId is not null).Sum(d => d.Minimo)));
+        if (Escalas.DiasFechados(Dados, dia, dia).Count > 0) minimo = 0;
+        return (_escala.Atual.Count(a => a.Data == dia && a.Trabalha), minimo);
+    }
+}

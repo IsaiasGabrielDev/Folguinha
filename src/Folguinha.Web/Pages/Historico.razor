@@ -1,0 +1,102 @@
+@page "/historico"
+@inherits PaginaBase
+
+<PageTitle>Histórico · Folguinha</PageTitle>
+
+<Cabecalho Titulo="Histórico de versões" Voltar="mais" />
+
+@if (Dados.Escalas.Count == 0)
+{
+    <Vazio Icone="historico" Titulo="Nenhuma escala ainda" Texto="As versões aparecem aqui depois da primeira publicação." />
+    return;
+}
+
+<label class="campo">Escala
+    <select value="@_escala?.Id" @onchange="Trocar">
+        @foreach (var e in Dados.Escalas.OrderByDescending(e => e.Inicio))
+        {
+            <option value="@e.Id">@Formatos.Periodo(e) · @Formatos.Estado(e, true)</option>
+        }
+    </select>
+</label>
+
+@if (_escala is { } escala)
+{
+    @if (escala.Rascunho is not null && escala.Versoes.Count > 0)
+    {
+        <p class="nota alerta"><Icone Nome="info" Tamanho="18" /><span>Há @Escalas.Diferencas(escala.UltimaVersao!.Alocacoes, escala.Rascunho).Count alteração(ões) ainda não publicada(s).</span></p>
+    }
+    @if (escala.Versoes.Count == 0)
+    {
+        <p class="ajuda">Esta escala ainda não foi publicada.</p>
+    }
+    @foreach (var v in escala.Versoes.Reverse())
+    {
+        var versao = v;
+        var anterior = v.Numero > 1 ? escala.Versoes[v.Numero - 2].Alocacoes : null;
+        <article class="cartao">
+            <div class="linha entre">
+                <h2>Versão @v.Numero</h2>
+                <span class="chip">@Formatos.DataHora(v.PublicadaEm)</span>
+            </div>
+            <p><strong>@v.Motivo</strong> · por @v.Autor</p>
+            <p class="ajuda pequeno">
+                @(v.Afetados.Count == 1 ? "1 pessoa afetada" : $"{v.Afetados.Count} pessoas afetadas")@(v.Afetados.Count is > 0 and <= 6 ? ": " + string.Join(", ", v.Afetados.Select(id => Dados.Funcionario(id)?.Nome ?? "pessoa removida")) : "")
+                · @(v.AlertasAceitos.Count == 1 ? "1 alerta justificado" : $"{v.AlertasAceitos.Count} alertas justificados")
+            </p>
+            @if (anterior is not null)
+            {
+                <details open="@(_aberta == v.Numero)">
+                    <summary class="botao texto pequeno" style="display: inline-flex;">O que mudou</summary>
+                    <div class="rolagem">
+                        <table class="tabela">
+                            <thead><tr><th>Dia</th><th>Pessoa</th><th>Antes</th><th>Depois</th></tr></thead>
+                            <tbody>
+                                @foreach (var m in Escalas.Diferencas(anterior, v.Alocacoes))
+                                {
+                                    <tr>
+                                        <td>@Formatos.Dia(m.Data)</td>
+                                        <td>@(Dados.Funcionario(m.FuncionarioId)?.Nome ?? "—")</td>
+                                        <td>@Escalas.Descrever(Dados, m.Antes)</td>
+                                        <td><strong>@Escalas.Descrever(Dados, m.Depois)</strong></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            }
+            @if (v.AlertasAceitos.Count > 0)
+            {
+                <details>
+                    <summary class="botao texto pequeno" style="display: inline-flex;">Justificativas</summary>
+                    <ul>
+                        @foreach (var a in v.AlertasAceitos)
+                        {
+                            <li><span class="ajuda">@a.Mensagem</span><br />→ @a.Justificativa</li>
+                        }
+                    </ul>
+                </details>
+            }
+            <a class="botao pequeno" href="@($"exportar?id={escala.Id}&versao={v.Numero}")"><Icone Nome="planilha" Tamanho="16" /> Exportar esta versão</a>
+        </article>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")] public Guid? IdPedido { get; set; }
+
+    Escala? _escala;
+    int _aberta;
+
+    protected override void OnParametersSet()
+    {
+        _escala = (IdPedido is { } id ? Dados.Escala(id) : null) ?? Dados.Escalas.MaxBy(e => e.Inicio);
+        _aberta = _escala?.Versoes.Count ?? 0;
+    }
+
+    void Trocar(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id)) Nav.NavigateTo($"historico?id={id}");
+    }
+}

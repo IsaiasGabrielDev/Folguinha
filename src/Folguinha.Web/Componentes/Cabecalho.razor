@@ -1,0 +1,24 @@
+@* Título da página, com "voltar" opcional e área de ações. *@
+<header class="cabecalho">
+    <div class="titulo">
+        @if (Voltar is not null)
+        {
+            <a class="voltar" href="@Voltar" aria-label="Voltar"><Icone Nome="voltar" Tamanho="24" /></a>
+        }
+        <div>
+            @if (Subtitulo is not null)
+            {
+                <p class="subtitulo">@Subtitulo</p>
+            }
+            <h1>@Titulo</h1>
+        </div>
+    </div>
+    @Acoes
+</header>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public string? Subtitulo { get; set; }
+    [Parameter] public string? Voltar { get; set; }
+    [Parameter] public RenderFragment? Acoes { get; set; }
+}
