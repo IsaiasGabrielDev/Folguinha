@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Folguinha.Domain/Folguinha.Domain.csproj" />
+    <Project Path="src/Folguinha.Application/Folguinha.Application.csproj" />
+    <Project Path="src/Folguinha.Infrastructure/Folguinha.Infrastructure.csproj" />
+    <Project Path="src/Folguinha.App/Folguinha.App.csproj" />
+    <Project Path="src/Folguinha.App.Desktop/Folguinha.App.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/mobile/">
+    <Project Path="src/Folguinha.App.Android/Folguinha.App.Android.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="src/Folguinha.App.iOS/Folguinha.App.iOS.csproj">
+      <Deploy />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Folguinha.Domain.Tests/Folguinha.Domain.Tests.csproj" />
+    <Project Path="tests/Folguinha.Application.Tests/Folguinha.Application.Tests.csproj" />
+  </Folder>
+</Solution>
