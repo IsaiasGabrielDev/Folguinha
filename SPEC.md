@@ -127,6 +127,22 @@ Heurística determinística em C# puro (sem solver nativo, roda no navegador), s
 5. **Ocorrências:** registrar → afetados → substitutos → simular → aprovar.
 6. **Histórico de versões** e **Exportar** (individual / consolidado / relatório).
 
+## Estado do beta (17/09/2026)
+Fases 1–9 implementadas; ver `tasks/todo.md`. Pendências reais:
+- publicar o site (precisa de um repositório GitHub e de ativar o Pages; o workflow está pronto);
+- testar no iPhone e no Android reais, instalados na tela inicial;
+- fase online (API, PostgreSQL, login/perfis, funcionário consultando, notificações), PDF e WhatsApp.
+
+Decisões tomadas durante a implementação:
+- **Persistência do beta:** um documento JSON (`DadosDaUnidade`) no IndexedDB, com JSON gerado em compilação; versões de escala imutáveis dentro dele.
+- **Planilha:** `.xlsx` escrito sem bibliotecas (validado com o OpenXmlValidator), para o app ficar leve (~3,2 MB no primeiro acesso).
+- **Carnaval:** vem da BrasilAPI como "nacional", mas entra como ponto facultativo desligado.
+- **Feriado nacional:** não muda de data nem é apagado; só liga/desliga e renomeia.
+- **Regras da CLT:** só podem ficar iguais ou mais rígidas que o padrão; regras operacionais e de preferência são livres.
+- **LGPD:** motivo de ausência não aparece em escala, planilha ou histórico ("ausência aprovada"), exceto folga extra.
+- **Intervalo na planilha:** horário sugerido no meio da jornada (o app guarda só a duração).
+- **Diagnóstico:** usa uma chave de armazenamento separada e não toca nos dados reais.
+
 ## Ordem de implementação (fatias verificáveis)
 1. Solution, projetos, git, `docs/especificacao.md`, `SPEC.md`, `tasks/plan.md`, `tasks/todo.md`. ✅
 2. ~~Spike iOS/Android~~ → **Spike web:** IndexedDB + .xlsx rodando no navegador (inclusive Safari do iPhone).
@@ -169,6 +185,8 @@ Heurística determinística em C# puro (sem solver nativo, roda no navegador), s
 
 ## Comandos
 ```
+E2E:             node tools/navegador.mjs http://localhost:5180/ --script tools/e2e-beta.mjs
+Offline:         node tools/navegador.mjs <site publicado> --script tools/e2e-offline.mjs
 Build:           dotnet build Folguinha.slnx
 Testes:          dotnet test Folguinha.slnx
 Rodar o PWA:     dotnet run --project src/Folguinha.Web      (abre em http://localhost:5xxx)

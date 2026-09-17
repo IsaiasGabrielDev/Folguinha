@@ -69,4 +69,12 @@
   - Verify: `node tools/navegador.mjs http://localhost:5180/ --script tools/e2e-beta.mjs` (390×844 e 1280×900) → roteiro completo sem erros no console
 
 ## Fase 9 — Publicação
-- [ ] Publish Release + verificação offline + workflow de deploy
+- [x] Ícones do app (`docs/design/icone.html` → `wwwroot/icon-*.png`, `apple-touch-icon.png`), manifest em pt-BR
+- [x] `dotnet publish -c Release` sem avisos; ~3,2 MB com Brotli; gerar um mês (8 pessoas) ≈ 0,4 s no navegador
+- [x] Build Release testado: roteiro completo, abertura offline pelo service worker, subpasta estilo GitHub Pages e link direto via 404.html (`tools/servidor-pages.mjs`)
+- [x] Workflow `.github/workflows/publicar.yml` (testes + GitHub Pages) e README
+- [ ] **Pendente (precisa de conta):** criar o repositório no GitHub, ativar Pages (Source: GitHub Actions) e fazer o push
+- [ ] **Pendente (precisa de aparelho):** instalar e testar no iPhone (Safari) e no Android (Chrome)
+
+## Fase 10 — Online (fora do beta)
+- [ ] API ASP.NET Core + PostgreSQL reaproveitando Application/Infrastructure; login e perfis; funcionário consultando; notificações; PDF; WhatsApp

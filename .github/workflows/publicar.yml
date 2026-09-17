@@ -1,0 +1,54 @@
+name: Testar e publicar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publicar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Testes
+        run: dotnet test Folguinha.slnx -c Release
+
+  publicar:
+    needs: testar
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publicar o PWA
+        run: dotnet publish src/Folguinha.Web -c Release -o saida
+      - name: Preparar para o GitHub Pages
+        # 404.html = index.html para as rotas do app; .nojekyll para servir a pasta _framework
+        run: |
+          cp saida/wwwroot/index.html saida/wwwroot/404.html
+          touch saida/wwwroot/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: saida/wwwroot
+      - id: deploy
+        uses: actions/deploy-pages@v4

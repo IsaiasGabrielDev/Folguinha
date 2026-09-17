@@ -1,5 +1,5 @@
 // Controla o Edge/Chrome headless via DevTools Protocol para testes de fumaça do PWA.
-// Uso: node tools/navegador.mjs <url> [--esperar "texto"] [--script arquivo.mjs] [--foto saida.png] [--largura 390 --altura 844]
+// Uso: node tools/navegador.mjs <url> [--esperar "texto"] [--script arquivo.mjs] [--foto saida.png] [--largura 390 --altura 844] [--escala 2] [--reduzir 0.5]
 import { spawn } from 'node:child_process';
 import { mkdtempSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -18,6 +18,8 @@ const foto = opcao('foto');
 const largura = Number(opcao('largura', 390));
 const altura = Number(opcao('altura', 844));
 const limite = Number(opcao('limite', 90)) * 1000;
+const escala = Number(opcao('escala', 2));
+const reduzir = opcao('reduzir'); // fator da captura (ex.: 0.375 para 512→192)
 
 const candidatos = [
     process.env.NAVEGADOR,
@@ -31,7 +33,8 @@ const porta = 9300 + Math.floor(Math.random() * 500);
 const perfil = mkdtempSync(join(tmpdir(), 'folguinha-nav-'));
 const navegador = spawn(exe, [
     '--headless=new', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${porta}`,
-    `--user-data-dir=${perfil}`, `--window-size=${largura},${altura}`, 'about:blank',
+    `--user-data-dir=${perfil}`, `--window-size=${largura},${altura}`,
+    ...(process.env.NAVEGADOR_ARGS?.split('|').filter(Boolean) ?? []), 'about:blank',
 ], { stdio: 'ignore' });
 
 const dormir = ms => new Promise(r => setTimeout(r, ms));
@@ -106,7 +109,8 @@ const preencher = async (rotulo, valor) => {
     await dormir(200);
 };
 const fotografar = async caminho => {
-    const { data } = await cdp('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    const clip = reduzir ? { x: 0, y: 0, width: largura, height: altura, scale: Number(reduzir) } : undefined;
+    const { data } = await cdp('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false, clip });
     writeFileSync(caminho, Buffer.from(data, 'base64'));
 };
 
@@ -114,8 +118,12 @@ let codigo = 0;
 try {
     await cdp('Page.enable');
     await cdp('Runtime.enable');
-    await cdp('Emulation.setDeviceMetricsOverride', { width: largura, height: altura, deviceScaleFactor: 2, mobile: largura < 700 });
+    await cdp('Emulation.setDeviceMetricsOverride', { width: largura, height: altura, deviceScaleFactor: escala, mobile: largura < 700 });
     await cdp('Page.navigate', { url });
+    for (let i = 0; i < 40; i++) {
+        try { if (await avaliar('document.readyState') === 'complete') break; } catch { /* página trocando */ }
+        await dormir(250);
+    }
     if (esperar) await esperarTexto(esperar);
     if (roteiro) {
         const mod = await import(pathToFileURL(resolve(roteiro)).href);

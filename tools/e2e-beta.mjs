@@ -8,7 +8,8 @@ export default async function ({ avaliar, texto, esperarTexto, clicar, preencher
     const pasta = process.env.FOTOS ?? 'artefatos';
     mkdirSync(pasta, { recursive: true });
     const foto = nome => fotografar(join(pasta, `${nome}.png`));
-    const ir = async caminho => { await avaliar(`Blazor.navigateTo(${JSON.stringify(caminho)})`); await dormir(400); };
+    // caminhos relativos à <base>, para funcionar também em subpasta (GitHub Pages)
+    const ir = async caminho => { await avaliar(`Blazor.navigateTo(${JSON.stringify(caminho.replace(/^\//, ''))})`); await dormir(400); };
     const passo = nome => console.error(`▶ ${nome}`);
     const hoje = new Date();
     const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

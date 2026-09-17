@@ -15,11 +15,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=Fredoka:wght@500;600&amp;display=swap" />
     <base href="/" />
+    <script>
+        // GitHub Pages de projeto serve em /<repositório>/; ajusta a base sem mudar o arquivo (o service worker confere o hash)
+        if (location.hostname.endsWith('github.io')) {
+            const pasta = location.pathname.split('/')[1];
+            if (pasta) document.querySelector('base').setAttribute('href', `/${pasta}/`);
+        }
+    </script>
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="css/app.css" />
     <link href="manifest.webmanifest" rel="manifest" />
-    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <script type="importmap"></script>
 </head>
 
@@ -38,7 +45,7 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
 </body>
 
 </html>
