@@ -214,9 +214,9 @@ public sealed class EscaladoDuranteAfastamento() : Regra(Padrao)
             var afastamentos = ctx.Ocorrencias.Where(o => o.FuncionarioId == f.Id && o.Afasta).ToList();
             foreach (var a in ctx.TrabalhoDe(f))
                 if (ctx.NoPeriodo(a.Data) && afastamentos.Any(o => o.Cobre(a.Data)))
-                    // sem o tipo da ocorrência: o gestor só precisa saber que há afastamento (LGPD)
+                    // sem o tipo da ocorrência: o gestor só precisa saber que há ausência aprovada (LGPD)
                     yield return Violacao(f, a.Data,
-                        $"{f.Nome} tem afastamento aprovado em {Dia(a.Data)} e está na escala.",
+                        $"{f.Nome} tem ausência aprovada em {Dia(a.Data)} e está na escala.",
                         "Remaneje o turno para um substituto.");
         }
     }

@@ -16,7 +16,7 @@ public class AfastamentoTests
         var v = Assert.Single(_regra.Validar(Ctx([bruno], [Trab(bruno, D(15), "08:00", "16:20")], ocorrencias: [atestado])));
 
         Assert.Equal(Severidade.Bloqueio, v.Severidade);
-        Assert.Equal("Bruno tem afastamento aprovado em qui 15/10 e está na escala.", v.Mensagem);
+        Assert.Equal("Bruno tem ausência aprovada em qui 15/10 e está na escala.", v.Mensagem);
         Assert.DoesNotContain("atestado", v.Mensagem, StringComparison.OrdinalIgnoreCase);
     }
 

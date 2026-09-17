@@ -45,6 +45,8 @@ Local do repositório: `C:\Users\Isaias\source\repos\Folguinha`.
 **Entra:**
 1. **Empresa e unidade:** nome, CNPJ, ramo, UF/município, fuso, convenção (texto). Horário de funcionamento por dia com **múltiplos períodos**, virada da meia-noite, preparação/fechamento e exceções por data (ESPEC §3–4).
 2. **Setores e funções.** **Funcionários** (ESPEC §5): matrícula, função(ões), contrato, admissão/término, carga diária/semanal/mensal, regime, turno principal, **disponibilidade por dia e faixa** com tipo (contratual / restrição permanente / preferência / temporária aprovada / afastamento, §5.1), permissão e limite de horas extras.
+   - **Situação inicial** (pedida ao cadastrar e ao montar a primeira escala): data da última folga, último domingo de folga e se trabalhou no último feriado. Sem histórico no app, o gerador continua a sequência a partir disso.
+   - **Folga extra periódica** (ex.: +1 a cada 2 semanas), com posição: qualquer dia, sábado + domingo, ou colada na folga normal. Pode ser aplicada a um funcionário ou a todos. Folga extra numa data específica é lançada como ocorrência "folga extra".
 3. **Turnos** e **demanda por dia × turno × função** (mínimo/ideal), com demanda especial por data.
 4. **Regras configuráveis** com nível **Obrigatória / Alerta / Preferência** (§2) e **versionadas** (fonte, vigência, versão, responsável; §7.2). Mudar uma regra não altera escalas encerradas.
 5. **Geração automática** (semana/quinzena/mês) na ordem de prioridade da §8.

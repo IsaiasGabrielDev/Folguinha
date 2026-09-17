@@ -29,6 +29,12 @@
   - Verify: `dotnet test Folguinha.Core.slnf` → 65 testes; estresse manual 20 pessoas × 3 meses ≈ 0,2–0,9 s/mês, sem bloqueios
   - Limitação conhecida: semana antes da folga dominical obrigatória pode ter 5 dias (limite de 6 seguidos)
 
+## Fase 4b — Pedidos do usuário (16/09)
+- [x] Situação inicial no cadastro (última folga, último domingo de folga, último feriado) → histórico presumido
+- [x] Folga extra periódica (qualquer dia / sábado+domingo / colada na normal) e avulsa (ocorrência `FolgaExtra`)
+  - Verify: `dotnet test Folguinha.Core.slnf` → 75 testes
+- [ ] UI (Fase 8): perguntar esses campos no cadastro do funcionário e ao gerar a primeira escala; ação "aplicar a todos"
+
 ## Fase 5 — Remanejamento
 - [x] Feriados considerar/ignorar + rodízio (feito na Fase 4)
 - [ ] Ocorrência → turnos afetados → substitutos ranqueados (§9.2) → simulação de impacto

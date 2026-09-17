@@ -31,10 +31,38 @@ public sealed record Funcionario(
     public IReadOnlyList<Guid>? Turnos { get; init; }
     public Guid? TurnoPrincipal { get; init; }
     public IReadOnlyList<Disponibilidade>? Disponibilidades { get; init; }
+    /// Como a pessoa chega na primeira escala (usado enquanto não há histórico no app).
+    public SituacaoInicial? Situacao { get; init; }
+    public FolgaExtraPeriodica? FolgaExtra { get; init; }
 
     public bool TemFuncao(Guid funcaoId) => Funcoes?.Contains(funcaoId) == true;
 
     public bool PodeTurno(Guid turnoId) => Turnos is null || Turnos.Contains(turnoId);
+}
+
+/// Informado no cadastro: a escala nova continua a sequência que a pessoa já vinha fazendo.
+/// Para 12x36, `UltimaFolga` é o último dia sem plantão.
+public sealed record SituacaoInicial(
+    DateOnly UltimaFolga,
+    DateOnly? UltimoDomingoDeFolga = null,
+    bool? TrabalhouUltimoFeriado = null);
+
+/// Onde cai a folga extra: qualquer dia, sábado + domingo, ou colada na folga normal da semana.
+public enum PosicaoFolgaExtra { Livre, FimDeSemana, JuntoDaFolgaNormal }
+
+/// Folgas além do regime, ex.: 6x1 com uma folga a mais a cada 2 semanas (contadas a partir da semana de `APartirDe`).
+public sealed record FolgaExtraPeriodica(
+    int ACadaSemanas,
+    DateOnly APartirDe,
+    int Quantidade = 1,
+    PosicaoFolgaExtra Posicao = PosicaoFolgaExtra.Livre)
+{
+    public int NaSemana(DateOnly segunda)
+    {
+        var inicio = APartirDe.AddDays(-(((int)APartirDe.DayOfWeek + 6) % 7));
+        var semanas = (segunda.DayNumber - inicio.DayNumber) / 7;
+        return semanas >= 0 && semanas % ACadaSemanas == 0 ? Quantidade : 0;
+    }
 }
 
 public enum TipoRestricao { Contratual, Permanente, Temporaria, Preferencia }
@@ -94,6 +122,8 @@ public enum TipoOcorrencia
 {
     Atestado, FaltaJustificada, FaltaInjustificada, Ferias, Licenca, Acidente, Atraso,
     SaidaAntecipada, AusenciaParcial, CompromissoAprovado, ConvocacaoExtraordinaria, TrocaVoluntaria,
+    /// Folga concedida além do regime (vira folga na escala e não substitui as folgas normais).
+    FolgaExtra,
 }
 
 /// Guarda só o motivo administrativo (`Tipo`/`Observacao`); nunca diagnóstico (LGPD).
@@ -107,7 +137,7 @@ public sealed record Ocorrencia(
 {
     /// Tipos em que a pessoa não pode estar escalada no período.
     public bool Afasta => Tipo is TipoOcorrencia.Atestado or TipoOcorrencia.FaltaJustificada or TipoOcorrencia.Ferias
-        or TipoOcorrencia.Licenca or TipoOcorrencia.Acidente or TipoOcorrencia.CompromissoAprovado;
+        or TipoOcorrencia.Licenca or TipoOcorrencia.Acidente or TipoOcorrencia.CompromissoAprovado or TipoOcorrencia.FolgaExtra;
 
     public bool Cobre(DateOnly dia) => dia >= Inicio && dia <= Fim;
 }

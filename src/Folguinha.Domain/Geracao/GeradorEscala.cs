@@ -43,6 +43,7 @@ sealed class Execucao
 {
     readonly EntradaGeracao e;
     readonly Dictionary<Guid, List<Alocacao>> doFuncionario;
+    readonly List<Alocacao> historico;
     readonly List<Alocacao> geradas = [];
     readonly List<Violacao> avisos = [];
     readonly HashSet<(Guid, DateOnly)> folgas = [];
@@ -53,10 +54,14 @@ sealed class Execucao
     public Execucao(EntradaGeracao entrada)
     {
         e = entrada;
-        doFuncionario = e.Funcionarios.ToDictionary(f => f.Id,
-            f => e.Historico.Where(a => a.FuncionarioId == f.Id && a.Data < e.Inicio).OrderBy(a => a.Data).ToList());
-        obrigatorias = e.Regras.Where(r => r.Definicao.Nivel == NivelRegra.Obrigatoria && r is not CoberturaMinima).ToArray();
         feriados = e.Feriados.Where(f => f.Considerado).OrderBy(f => f.Data).ToArray();
+        doFuncionario = e.Funcionarios.ToDictionary(f => f.Id, f =>
+        {
+            var reais = e.Historico.Where(a => a.FuncionarioId == f.Id && a.Data < e.Inicio).ToList();
+            return reais.Concat(reais.Count == 0 ? HistoricoPresumido(f) : []).OrderBy(a => a.Data).ToList();
+        });
+        historico = doFuncionario.Values.SelectMany(x => x).ToList();
+        obrigatorias = e.Regras.Where(r => r.Definicao.Nivel == NivelRegra.Obrigatoria && r is not CoberturaMinima).ToArray();
         var domingo = e.Regras.OfType<DomingoDeFolga>().FirstOrDefault() ?? new DomingoDeFolga();
         semanasDomingo = e.Empresa.Ramo == RamoAtividade.Comercio ? domingo.SemanasComercio : domingo.SemanasOutros;
     }
@@ -71,12 +76,44 @@ sealed class Execucao
         }
 
         var ctx = new ContextoValidacao(e.Empresa, e.Inicio, e.Fim, e.Funcionarios,
-            [.. e.Historico.Where(a => a.Data < e.Inicio), .. geradas],
+            [.. historico, .. geradas],
             e.Feriados, e.Ocorrencias, e.Demandas, e.Turnos, e.Funcoes)
         {
             DiasFechados = Dias().Where(d => !Aberto(d)).ToHashSet(),
         };
         return new ResultadoGeracao(geradas, [.. Validador.Validar(ctx, e.Regras), .. avisos]);
+    }
+
+    /// Sem histórico no app: reconstrói os dias desde a última folga informada no cadastro.
+    IEnumerable<Alocacao> HistoricoPresumido(Funcionario f)
+    {
+        if (f.Situacao is not { } s || s.UltimaFolga >= e.Inicio) return [];
+        var turno = e.Turnos.FirstOrDefault(t => t.Id == f.TurnoPrincipal) ?? e.Turnos.FirstOrDefault(t => f.PodeTurno(t.Id));
+        Alocacao Trabalho(DateOnly d) => turno is null
+            ? Alocacao.Trabalho(f.Id, d, new(8, 0), new(16, 0), TimeSpan.FromHours(1))
+            : Alocacao.Trabalho(f.Id, d, turno.Inicio, turno.Fim, turno.Intervalo, turno.Id);
+
+        var dias = new Dictionary<DateOnly, Alocacao>();
+        if (f.Regime == Regime.DozePorTrintaESeis)
+        {
+            // plantão no dia anterior à folga informada mais recente
+            var ontem = e.Inicio.AddDays(-1);
+            var plantao = s.UltimaFolga == ontem ? ontem.AddDays(-1) : ontem;
+            dias[plantao] = Trabalho(plantao);
+        }
+        else
+        {
+            dias[s.UltimaFolga] = Alocacao.Folga(f.Id, s.UltimaFolga);
+            for (var d = s.UltimaFolga.AddDays(1); d < e.Inicio; d = d.AddDays(1)) dias[d] = Trabalho(d);
+            if (s.UltimoDomingoDeFolga is { } dom && dom <= s.UltimaFolga)
+                for (var d = dom; d < s.UltimaFolga; d = d.AddDays(7))
+                    dias.TryAdd(d, d == dom ? Alocacao.Folga(f.Id, d) : Trabalho(d));
+        }
+
+        if (s.TrabalhouUltimoFeriado is { } trabalhou && UltimoFeriado(e.Inicio) is { } feriado)
+            dias.TryAdd(feriado.Data, trabalhou ? Trabalho(feriado.Data) : Alocacao.Folga(f.Id, feriado.Data));
+
+        return dias.Values;
     }
 
     // ---------- Folgas da semana ----------
@@ -111,11 +148,23 @@ sealed class Execucao
                 falta--;
             }
 
+            var posicaoExtra = f.FolgaExtra is { } fe && fe.NaSemana(segunda) > 0 ? fe.Posicao : PosicaoFolgaExtra.Livre;
+            if (posicaoExtra == PosicaoFolgaExtra.FimDeSemana)
+                foreach (var d in livres.Where(d => d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday).Take(Math.Max(falta, 0)).ToList())
+                {
+                    livres.Remove(d);
+                    Folgar(f, d);
+                    falta--;
+                }
+
             for (; falta > 0 && livres.Count > 0; falta--)
             {
                 // nunca mais de 6 dias seguidos: a próxima folga não pode passar de última folga + 7
                 var limite = PrazoDaProximaFolga(UltimaFolga(f, dias[0]), minhas);
-                var candidatos = livres.Any(d => d <= limite) ? livres.Where(d => d <= limite) : livres;
+                var candidatos = livres.Any(d => d <= limite) ? livres.Where(d => d <= limite).ToList() : livres;
+                if (posicaoExtra == PosicaoFolgaExtra.JuntoDaFolgaNormal
+                    && candidatos.Where(d => minhas.Contains(d.AddDays(-1)) || minhas.Contains(d.AddDays(1))).ToList() is { Count: > 0 } colados)
+                    candidatos = colados;
                 var escolhido = candidatos
                     .OrderByDescending(d => Pontuar(f, d, feriado))
                     .ThenBy(d => (d.DayNumber + posicao) % 7)
@@ -155,6 +204,10 @@ sealed class Execucao
                 if (colegas - 1 < PessoasNecessarias(d, fn)) pontos -= 50;
             }
             if (e.RodizioFeriados && feriado?.Data == d && TrabalhouUltimoFeriado(f, d) && sobra > 0) pontos += 100;
+            // semana seguinte tem folga extra no sábado+domingo: folgar no fim desta evita 7 dias seguidos
+            if (f.FolgaExtra is { Posicao: PosicaoFolgaExtra.FimDeSemana } fe
+                && fe.NaSemana(segunda.AddDays(7)) > 0 && d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                pontos += 30;
             return pontos;
         }
     }
@@ -190,7 +243,8 @@ sealed class Execucao
         var considerados = dias.Count + antes.Count;
         var alvo = considerados >= 7 ? cota : (int)Math.Round(cota * considerados / 7.0, MidpointRounding.AwayFromZero);
         var jaTrabalhados = antes.Count(d => doFuncionario[f.Id].Any(a => a.Data == d && a.Trabalha));
-        return Math.Clamp(alvo - jaTrabalhados, 0, dias.Count);
+        var extras = (f.FolgaExtra?.NaSemana(segunda) ?? 0) + dias.Count(d => FolgaExtraAvulsa(f, d));
+        return Math.Clamp(alvo - jaTrabalhados - extras, 0, dias.Count);
     }
 
     TimeSpan HorasDoTurnoPrincipal(Funcionario f)
@@ -222,6 +276,7 @@ sealed class Execucao
         foreach (var (f, i) in e.Funcionarios.Select((f, i) => (f, i)))
         {
             if (Travada(f, dia) is { } t) hoje[f.Id] = t;
+            else if (FolgaExtraAvulsa(f, dia)) hoje[f.Id] = Alocacao.Folga(f.Id, dia);
             else if (Afastado(f, dia)) hoje[f.Id] = new Alocacao(f.Id, dia, TipoAlocacao.Ocorrencia);
             else if (!Aberto(dia) || folgas.Contains((f.Id, dia)) || !DeveTrabalhar12x36(f, dia, i))
                 hoje[f.Id] = Alocacao.Folga(f.Id, dia);
@@ -347,6 +402,9 @@ sealed class Execucao
     Alocacao? Travada(Funcionario f, DateOnly dia) => e.Travadas.FirstOrDefault(a => a.FuncionarioId == f.Id && a.Data == dia);
 
     bool Afastado(Funcionario f, DateOnly dia) => e.Ocorrencias.Any(o => o.FuncionarioId == f.Id && o.Afasta && o.Cobre(dia));
+
+    bool FolgaExtraAvulsa(Funcionario f, DateOnly dia) =>
+        e.Ocorrencias.Any(o => o.FuncionarioId == f.Id && o.Tipo == TipoOcorrencia.FolgaExtra && o.Cobre(dia));
 
     bool Trabalhou(Funcionario f, DateOnly dia) => doFuncionario[f.Id].Any(a => a.Data == dia && a.Trabalha);
 
