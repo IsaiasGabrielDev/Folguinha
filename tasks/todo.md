@@ -13,9 +13,11 @@
 - [ ] GitHub Actions macOS compila iOS (sem assinatura) — valida AOT de EF Core/ClosedXML
 
 ## Fase 3 — Domain: modelo + regras
-- [ ] Entidades: Empresa, Unidade, Setor, Funcao, Turno, Funcionario, Disponibilidade, Demanda, Feriado, Ocorrencia, Escala, Alocacao, Violacao (todas com TenantId)
-- [ ] `IRegra`, `NivelRegra`, `Severidade`, metadados de versão/vigência
-- [ ] Regras: jornada diária/semanal, intrajornada, interjornada, DSR/7º dia, domingo 3/7 semanas, feriado, 12x36, tempo parcial, hora noturna, menor, afastamento, cobertura, preferências — um teste por regra + mensagem
+- [x] Entidades: Empresa, Funcao, Turno, Funcionario, Demanda, Feriado, Ocorrencia, Alocacao (TenantId/Unidade ficam na persistência)
+- [x] `Regra` + `DefinicaoRegra` (nível, severidade, versão, vigência), `Violacao`, `ContextoValidacao`, `Validador`, `CatalogoRegras`
+- [x] Regras: jornada diária (5x2/12x36/HE), semanal (+tempo parcial), intrajornada, interjornada, 7º dia, domingo 3/7 semanas, feriado, hora noturna, menor, afastamento (sem expor motivo), cobertura
+  - Verify: `dotnet test Folguinha.Core.slnf` → 48 testes
+- [ ] (Fase 4, junto do gerador) Disponibilidade por dia/faixa, Setor/Unidade, regras de preferência (fechamento→abertura, alternância, preferências)
 
 ## Fase 4 — Gerador
 - [ ] 6x1 / 5x2 com rodízio de domingo
