@@ -17,17 +17,21 @@
 - [x] `Regra` + `DefinicaoRegra` (nível, severidade, versão, vigência), `Violacao`, `ContextoValidacao`, `Validador`, `CatalogoRegras`
 - [x] Regras: jornada diária (5x2/12x36/HE), semanal (+tempo parcial), intrajornada, interjornada, 7º dia, domingo 3/7 semanas, feriado, hora noturna, menor, afastamento (sem expor motivo), cobertura
   - Verify: `dotnet test Folguinha.Core.slnf` → 48 testes
-- [ ] (Fase 4, junto do gerador) Disponibilidade por dia/faixa, Setor/Unidade, regras de preferência (fechamento→abertura, alternância, preferências)
+- [x] Disponibilidade por dia/faixa (contratual/permanente/temporária/preferência) + regra de preferência
+- [ ] Setor/Unidade no modelo (Fase 6, com a persistência)
 
-## Fase 4 — Gerador
-- [ ] 6x1 / 5x2 com rodízio de domingo
-- [ ] 12x36
-- [ ] Personalizado
-- [ ] Cenário varejo 8 pessoas com demanda menor no fim de semana
+## Fase 4 — Gerador (`Folguinha.Domain/Geracao`)
+- [x] Planejamento semanal de folgas (capacidade por dia/função, prazo de 6 dias, domingo obrigatório e preferencial)
+- [x] Distribuição diária: mínimo → ideal → turno principal; valida cada tentativa com as regras obrigatórias
+- [x] 6x1 / 5x2 / personalizado (cota proporcional em semanas parciais) e 12x36 (alternância, 36h)
+- [x] Funções, disponibilidade, funcionamento/dias fechados, afastamentos, alocações travadas, histórico entre meses
+- [x] Rodízio de feriados (derivado do histórico) + aviso quando não dá
+  - Verify: `dotnet test Folguinha.Core.slnf` → 65 testes; estresse manual 20 pessoas × 3 meses ≈ 0,2–0,9 s/mês, sem bloqueios
+  - Limitação conhecida: semana antes da folga dominical obrigatória pode ter 5 dias (limite de 6 seguidos)
 
-## Fase 5 — Feriados e remanejamento
-- [ ] Feriados considerar/ignorar + rodízio (quem trabalhou no último folga no próximo)
-- [ ] Ocorrências, alocações travadas, substitutos ranqueados
+## Fase 5 — Remanejamento
+- [x] Feriados considerar/ignorar + rodízio (feito na Fase 4)
+- [ ] Ocorrência → turnos afetados → substitutos ranqueados (§9.2) → simulação de impacto
 
 ## Fase 6–10
 Ver tasks/plan.md — detalhar ao chegar.

@@ -128,6 +128,30 @@ public class CoberturaTests
     }
 }
 
+public class PreferenciaTests
+{
+    readonly PreferenciaDoFuncionario _regra = new();
+
+    [Fact]
+    public void Informa_quando_a_preferencia_nao_foi_atendida()
+    {
+        var f = Func("Carla") with { Disponibilidades = [new Disponibilidade(DayOfWeek.Saturday, new(8, 0), new(14, 0), TipoRestricao.Preferencia)] };
+
+        var v = Assert.Single(_regra.Validar(Ctx([f], [Trab(f, D(17), "13:40", "22:00")])));
+
+        Assert.Equal(Severidade.Informativo, v.Severidade);
+        Assert.Equal("Carla prefere outro horário em sáb 17/10 (13:40–22:00).", v.Mensagem);
+    }
+
+    [Fact]
+    public void Nada_a_informar_quando_atendida()
+    {
+        var f = Func() with { Disponibilidades = [new Disponibilidade(DayOfWeek.Saturday, new(8, 0), new(14, 0), TipoRestricao.Preferencia)] };
+
+        Assert.Empty(_regra.Validar(Ctx([f], [Trab(f, D(17), "08:00", "13:00", 0)])));
+    }
+}
+
 public class ValidadorTests
 {
     [Fact]

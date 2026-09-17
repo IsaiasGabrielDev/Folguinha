@@ -16,6 +16,7 @@ public sealed record Funcao(Guid Id, string Nome);
 /// Turno com `Fim` menor ou igual a `Inicio` termina no dia seguinte.
 public sealed record Turno(Guid Id, string Nome, TimeOnly Inicio, TimeOnly Fim, TimeSpan Intervalo);
 
+/// Listas nulas = sem restrição (qualquer função/turno, disponível todos os dias).
 public sealed record Funcionario(
     Guid Id,
     string Nome,
@@ -24,7 +25,37 @@ public sealed record Funcionario(
     TipoContrato Contrato = TipoContrato.Clt,
     bool MenorDeIdade = false,
     bool PermiteHoraExtra = false,
-    TimeSpan LimiteHoraExtraSemanal = default);
+    TimeSpan LimiteHoraExtraSemanal = default)
+{
+    public IReadOnlyList<Guid>? Funcoes { get; init; }
+    public IReadOnlyList<Guid>? Turnos { get; init; }
+    public Guid? TurnoPrincipal { get; init; }
+    public IReadOnlyList<Disponibilidade>? Disponibilidades { get; init; }
+
+    public bool TemFuncao(Guid funcaoId) => Funcoes?.Contains(funcaoId) == true;
+
+    public bool PodeTurno(Guid turnoId) => Turnos is null || Turnos.Contains(turnoId);
+}
+
+public enum TipoRestricao { Contratual, Permanente, Temporaria, Preferencia }
+
+/// No `Dia`, a pessoa só trabalha dentro de [Inicio, Fim]; sem horários = não trabalha nesse dia.
+/// `Preferencia` o gerador tenta respeitar; os demais tipos são obrigatórios (ESPEC §5.1).
+public sealed record Disponibilidade(
+    DayOfWeek Dia,
+    TimeOnly? Inicio,
+    TimeOnly? Fim,
+    TipoRestricao Tipo = TipoRestricao.Contratual,
+    DateOnly? ValidaAte = null)
+{
+    public bool ValeEm(DateOnly dia) => dia.DayOfWeek == Dia && (ValidaAte is null || dia <= ValidaAte);
+
+    public bool Comporta(Turno t) =>
+        Inicio is { } ini && Fim is { } fim && t.Inicio >= ini && t.Fim > t.Inicio && t.Fim <= fim;
+}
+
+/// Horário de abertura da unidade; vários períodos no mesmo dia são permitidos.
+public sealed record PeriodoFuncionamento(DayOfWeek Dia, TimeOnly Abre, TimeOnly Fecha);
 
 /// Mínimo de pessoas num turno (opcionalmente numa função). Vale para um dia da semana
 /// ou para uma data específica; a data específica substitui o dia da semana.
@@ -37,6 +68,14 @@ public sealed record Demanda(
     DateOnly? Data = null)
 {
     public bool ValeEm(DateOnly dia) => Data is { } d ? d == dia : DiaSemana == dia.DayOfWeek;
+
+    /// Demandas do dia; a de data específica substitui a do dia da semana para o mesmo turno/função.
+    public static IEnumerable<Demanda> Aplicaveis(IEnumerable<Demanda> demandas, DateOnly dia)
+    {
+        var doDia = demandas.Where(d => d.ValeEm(dia)).ToList();
+        return doDia.Where(d => d.Data is not null
+            || !doDia.Any(x => x.Data is not null && x.TurnoId == d.TurnoId && x.FuncaoId == d.FuncaoId));
+    }
 }
 
 public enum AbrangenciaFeriado { Nacional, Estadual, Municipal, PontoFacultativo }

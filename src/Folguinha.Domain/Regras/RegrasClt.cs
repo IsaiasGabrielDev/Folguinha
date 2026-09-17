@@ -231,12 +231,9 @@ public sealed class CoberturaMinima() : Regra(Padrao)
     {
         for (var dia = ctx.Inicio; dia <= ctx.Fim; dia = dia.AddDays(1))
         {
-            var doDia = ctx.Demandas.Where(d => d.ValeEm(dia)).ToList();
-            // demanda por data substitui a do dia da semana para o mesmo turno/função
-            var aplicaveis = doDia.Where(d => d.Data is not null
-                || !doDia.Any(x => x.Data is not null && x.TurnoId == d.TurnoId && x.FuncaoId == d.FuncaoId));
+            if (ctx.DiasFechados.Contains(dia)) continue;
 
-            foreach (var d in aplicaveis)
+            foreach (var d in Demanda.Aplicaveis(ctx.Demandas, dia))
             {
                 var escalados = ctx.Alocacoes.Count(a => a.Trabalha && a.Data == dia && a.TurnoId == d.TurnoId
                     && (d.FuncaoId is null || a.FuncaoId == d.FuncaoId));
@@ -249,6 +246,25 @@ public sealed class CoberturaMinima() : Regra(Padrao)
                 yield return Violacao(null, dia, $"{Dia(dia)} · {turno}: {pessoas}{funcao}.",
                     "Veja os substitutos disponíveis para este turno.");
             }
+        }
+    }
+}
+
+public sealed class PreferenciaDoFuncionario() : Regra(Padrao)
+{
+    public static readonly DefinicaoRegra Padrao = new("pref.disponibilidade", "Preferência do funcionário",
+        "Preferência cadastrada (ESPEC §2.3)", NivelRegra.Preferencia);
+
+    public override IEnumerable<Violacao> Validar(ContextoValidacao ctx)
+    {
+        foreach (var f in ctx.Funcionarios)
+        foreach (var a in ctx.TrabalhoDe(f).Where(a => ctx.NoPeriodo(a.Data)))
+        {
+            var turno = new Turno(Guid.Empty, "", a.Inicio, a.Fim, a.Intervalo);
+            if ((f.Disponibilidades ?? []).Any(x => x.Tipo == TipoRestricao.Preferencia && x.ValeEm(a.Data) && !x.Comporta(turno)))
+                yield return Violacao(f, a.Data,
+                    $"{f.Nome} prefere outro horário em {Dia(a.Data)} ({Hora(a.Inicio)}–{Hora(a.Fim)}).",
+                    $"Se possível, troque {f.Nome} com alguém do turno preferido.");
         }
     }
 }

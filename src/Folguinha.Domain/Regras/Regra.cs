@@ -50,6 +50,9 @@ public sealed record ContextoValidacao(
     IReadOnlyList<Turno> Turnos,
     IReadOnlyList<Funcao> Funcoes)
 {
+    /// Dias em que a unidade não abre (a cobertura não é cobrada).
+    public IReadOnlySet<DateOnly> DiasFechados { get; init; } = new HashSet<DateOnly>();
+
     public bool NoPeriodo(DateOnly dia) => dia >= Inicio && dia <= Fim;
 
     /// Dias de trabalho do funcionário em ordem cronológica.
@@ -84,6 +87,6 @@ public static class CatalogoRegras
     [
         new JornadaDiaria(), new JornadaSemanal(), new Intrajornada(), new Interjornada(),
         new DiasConsecutivos(), new DomingoDeFolga(), new FeriadoTrabalhado(), new MenorTrabalhoNoturno(),
-        new EscaladoDuranteAfastamento(), new CoberturaMinima(),
+        new EscaladoDuranteAfastamento(), new CoberturaMinima(), new PreferenciaDoFuncionario(),
     ];
 }
