@@ -37,7 +37,11 @@
 
 ## Fase 5 — Remanejamento
 - [x] Feriados considerar/ignorar + rodízio (feito na Fase 4)
-- [ ] Ocorrência → turnos afetados → substitutos ranqueados (§9.2) → simulação de impacto
+- [x] Ocorrência → turnos afetados → substitutos ranqueados (§9.2) → simulação de impacto (`Domain/Remanejo`)
+  - Substituto: função, turno, folga no dia; valida regras obrigatórias; tenta mover a folga na semana sem piorar cobertura; calcula hora extra
+  - Aplicar: ausência + mudanças travadas, violações e impacto (cobertura, horas extras, afetados)
+  - Verify: `dotnet test Folguinha.Core.slnf` → 84 testes
+- [ ] Aprovação, nova versão e histórico (Fase 6, com a persistência)
 
 ## Fase 6–10
 Ver tasks/plan.md — detalhar ao chegar.
