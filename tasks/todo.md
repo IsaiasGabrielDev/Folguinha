@@ -4,7 +4,7 @@
 - [x] Solution (`Folguinha.slnx`), projetos Domain/Application/Infrastructure/App/Desktop/Android/iOS, testes xUnit
   - Verify: `dotnet build Folguinha.Core.slnf`
 - [x] `docs/especificacao.md`, `SPEC.md`, `tasks/`
-- [ ] Commit inicial
+- [x] Commit inicial
 
 ## Fase 2 — Spike mobile
 - [ ] Instalar workload Android; app vazio roda no emulador/aparelho

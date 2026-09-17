@@ -457,3 +457,6 @@ $RECYCLE.BIN/
 *.db
 *.db-shm
 *.db-wal
+
+# Canvas gerado (reconstruir com docs/design/build-mockups.mjs)
+docs/design/folguinha-telas.html

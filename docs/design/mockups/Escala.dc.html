@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=Fredoka:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF7F2; font-family: 'Figtree', 'Segoe UI', system-ui, sans-serif; color: #2B2622; -webkit-font-smoothing: antialiased; }
+    a { color: #A9442A; } a:hover { color: #E4704F; }
+    * { box-sizing: border-box; }
+    p, h1, h2, h3 { margin: 0; text-wrap: pretty; }
+  </style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #FBF7F2; display: flex; flex-direction: column;">
+
+<div style="flex: 1 1 auto; padding: 56px 16px 0; display: flex; flex-direction: column; gap: 14px;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <h1 style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 28px; line-height: 1.15; letter-spacing: -0.2px; ">Escala</h1>
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #FFF1CC; color: #8A5A00; font-size: 12px; font-weight: 600; white-space: nowrap; ">Rascunho · v4</span>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: #F4EEE6;">
+    <div style="height: 36px; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; box-shadow: 0 1px 3px rgba(60,40,20,0.08);">Semana</div>
+    <div style="height: 36px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; color: #6B625A;">Quinzena</div>
+    <div style="height: 36px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; color: #6B625A;">Mês</div>
+  </div>
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #6B625A;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg></div>
+    <span style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 500; font-size: 17px;">12 – 18 de outubro</span>
+    <div style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #6B625A;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"></path></svg></div>
+  </div>
+  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #FFF1CC; color: #8A5A00; font-size: 12px; font-weight: 600; white-space: nowrap; height: 24px; font-size: 11px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #8A5A00;"></span>Manhã</span><span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #DDF3EE; color: #1E6E5E; font-size: 12px; font-weight: 600; white-space: nowrap; height: 24px; font-size: 11px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #1E6E5E;"></span>Tarde</span><span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #E4E4FA; color: #4A479A; font-size: 12px; font-weight: 600; white-space: nowrap; height: 24px; font-size: 11px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #4A479A;"></span>Noite</span><span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #F4EEE6; color: #9A9087; font-size: 12px; font-weight: 600; white-space: nowrap; height: 24px; font-size: 11px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #9A9087;"></span>Folga</span><span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #FCE1E4; color: #C8374A; font-size: 12px; font-weight: 600; white-space: nowrap; height: 24px; font-size: 11px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #C8374A;"></span>Ocorrência</span>
+  </div>
+  <div style="background: #FFFFFF; border-radius: 22px; padding: 16px; box-shadow: 0 1px 2px rgba(60, 40, 20, 0.05), 0 8px 24px rgba(60, 40, 20, 0.05); padding: 12px 10px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: grid; grid-template-columns: 96px repeat(7, minmax(0, 1fr)); gap: 4px; align-items: center;">
+        <span style="font-size: 11px; font-weight: 600; color: #9A9087;">Equipe</span>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 10px; background: #FCE9E2;">
+  <span style="font-size: 10px; font-weight: 600; color: #A9442A;">Seg</span>
+  <span style="font-size: 14px; font-weight: 700; color: #A9442A;">12</span>
+</div><div style="display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 10px; background: transparent;">
+  <span style="font-size: 10px; font-weight: 600; color: #9A9087;">Ter</span>
+  <span style="font-size: 14px; font-weight: 700; color: #2B2622;">13</span>
+</div><div style="display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 10px; background: transparent;">
+  <span style="font-size: 10px; font-weight: 600; color: #9A9087;">Qua</span>
+  <span style="font-size: 14px; font-weight: 700; color: #2B2622;">14</span>
+</div><div style="display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 10px; background: transparent;">
+  <span style="font-size: 10px; font-weight: 600; color: #9A9087;">Qui</span>
+  <span style="font-size: 14px; font-weight: 700; color: #2B2622;">15</span>
+</div><div style="display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 10px; background: transparent;">
+  <span style="font-size: 10px; font-weight: 600; color: #9A9087;">Sex</span>
+  <span style="font-size: 14px; font-weight: 700; color: #2B2622;">16</span>
+</div><div style="display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 10px; background: transparent;">
+  <span style="font-size: 10px; font-weight: 600; color: #9A9087;">Sáb</span>
+  <span style="font-size: 14px; font-weight: 700; color: #2B2622;">17</span>
+</div><div style="display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 10px; background: transparent;">
+  <span style="font-size: 10px; font-weight: 600; color: #9A9087;">Dom</span>
+  <span style="font-size: 14px; font-weight: 700; color: #2B2622;">18</span>
+</div>
+      </div>
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+        <div style="display: grid; grid-template-columns: 96px repeat(7, minmax(0, 1fr)); gap: 4px; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+            <div style="width: 26px; height: 26px; flex: none; border-radius: 13px; background: {{ r.abg }}; color: {{ r.afg }}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">{{ r.ini }}</div>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 600; line-height: 1.1;">{{ r.name }}</span>
+              <span style="font-size: 10px; color: #9A9087;">{{ r.hours }}</span>
+            </div>
+          </div>
+          <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="7">
+            <div style="height: 34px; border-radius: 10px; background: {{ c.bg }}; color: {{ c.fg }}; outline: {{ c.ring }}; outline-offset: -2px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">{{ c.code }}</div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="display: grid; grid-template-columns: 96px repeat(7, minmax(0, 1fr)); gap: 4px; align-items: center; padding-top: 6px; border-top: 1px solid #E9E1D6;">
+        <span style="font-size: 11px; font-weight: 600; color: #9A9087;">Cobertura</span>
+        <span style="text-align: center; font-size: 11px; font-weight: 700; color: #1E6E5E;">4/4</span><span style="text-align: center; font-size: 11px; font-weight: 700; color: #1E6E5E;">5/5</span><span style="text-align: center; font-size: 11px; font-weight: 700; color: #1E6E5E;">5/5</span><span style="text-align: center; font-size: 11px; font-weight: 700; color: #1E6E5E;">5/5</span><span style="text-align: center; font-size: 11px; font-weight: 700; color: #1E6E5E;">6/6</span><span style="text-align: center; font-size: 11px; font-weight: 700; color: #C8374A;">3/4</span><span style="text-align: center; font-size: 11px; font-weight: 700; color: #1E6E5E;">3/3</span>
+      </div>
+    </div></div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 84px; padding: 16px 16px 14px; background: #FFFFFF; border-radius: 26px 26px 0 0; box-shadow: 0 -10px 30px rgba(60, 40, 20, 0.12); display: flex; flex-direction: column; gap: 10px;">
+  <div style="width: 40px; height: 4px; border-radius: 2px; background: #E9E1D6; align-self: center;"></div>
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <span style="font-weight: 700; font-size: 16px;">Diego · Sáb 17</span>
+      <span style="font-size: 13px; color: #6B625A;">Manhã · 08:00–16:20 · Atendente</span>
+    </div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #FCE1E4; color: #C8374A; font-size: 12px; font-weight: 600; white-space: nowrap; ">Bloqueio</span>
+  </div>
+  <p style="font-size: 13px; line-height: 1.4; color: #6B625A;">Descanso de 9h desde sexta (mínimo 11h). Passando para a tarde, a cobertura fica completa e ninguém faz hora extra.</p>
+  <div style="display: flex; gap: 8px;">
+    <div style="flex: 1 1 0; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; background: #E4704F; color: #FFFFFF; box-shadow: 0 6px 16px rgba(228, 112, 79, 0.28); height: 46px; font-size: 14px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3M17 17H5l3 3"></path></svg>Mudar para tarde</div>
+    <div style="flex: 1 1 0; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; background: #FFFFFF; color: #2B2622; border: 1.5px solid #E9E1D6; height: 46px; font-size: 14px;">Dar folga</div>
+  </div>
+</div>
+<nav style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; padding: 8px 12px 26px; background: #FFFFFF; border-top: 1px solid #E9E1D6; display: flex; justify-content: space-between; align-items: stretch;">
+  <div style="flex: 1 1 0; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #9A9087;">
+    <div style="width: 52px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: transparent;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H14v-6h-4v6H5.5A1.5 1.5 0 0 1 4 19.5z"></path></svg></div>
+    <span style="font-size: 11px; font-weight: 500;">Painel</span>
+  </div>
+  <div style="flex: 1 1 0; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #E4704F;">
+    <div style="width: 52px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: #FCE9E2;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></div>
+    <span style="font-size: 11px; font-weight: 700;">Escala</span>
+  </div>
+  <div style="flex: 1 1 0; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #9A9087;">
+    <div style="width: 52px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: transparent;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.3-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M15.5 5.2a3.5 3.5 0 0 1 0 6.6M18 14.8c1.8.7 3 2.4 3.5 5.2"></path></svg></div>
+    <span style="font-size: 11px; font-weight: 500;">Equipe</span>
+  </div>
+  <div style="flex: 1 1 0; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #9A9087;">
+    <div style="width: 52px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: transparent;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4.5" width="14" height="16.5" rx="3"></rect><path d="M9 3h6v3H9zM9 11h6M9 15h4"></path></svg></div>
+    <span style="font-size: 11px; font-weight: 500;">Ocorrências</span>
+  </div>
+  <div style="flex: 1 1 0; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #9A9087;">
+    <div style="width: 52px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: transparent;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"></circle><circle cx="12" cy="12" r="1.3"></circle><circle cx="19" cy="12" r="1.3"></circle></svg></div>
+    <span style="font-size: 11px; font-weight: 500;">Mais</span>
+  </div>
+</nav>
+</div>
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const S = {"M":{"bg":"#FFF1CC","fg":"#8A5A00","label":"Manhã"},"T":{"bg":"#DDF3EE","fg":"#1E6E5E","label":"Tarde"},"N":{"bg":"#E4E4FA","fg":"#4A479A","label":"Noite"},"F":{"bg":"#F4EEE6","fg":"#9A9087","label":"Folga"},"O":{"bg":"#FCE1E4","fg":"#C8374A","label":"Ocorrência"}};
+    const P = [["AS","Ana","#FCE9E2","#A9442A"],["BL","Bruno","#DDF3EE","#1E6E5E"],["CM","Carla","#FFF1CC","#8A5A00"],["DS","Diego","#E4E4FA","#4A479A"],["EP","Elisa","#F1E6F7","#7A3F99"],["FN","Felipe","#E3ECFA","#3D6FC2"],["GR","Gabi","#E6F2DC","#4C7A2A"],["HA","Hugo","#F4EEE6","#6B625A"]];
+    const G = [["F","M","M","M","M","F","M"],["T","O","O","T","T","T","F"],["M","T","T","F","T","M","T"],["F","N","N","N","N","M","F"],["M","M","F","M","M","T","T"],["T","F","M","T","M","F","M"],["F","T","T","M","F","T","M"],["T","M","M","F","T","M","F"]];
+    const H = ["44h","28h","44h","44h","44h","36h","36h","44h"];
+    return {
+      rows: G.map((r, i) => ({
+        ini: P[i][0], name: P[i][1], abg: P[i][2], afg: P[i][3], hours: H[i],
+        cells: r.map((c, j) => ({
+          code: c, bg: S[c].bg, fg: S[c].fg,
+          ring: (i === 3 && j === 5) ? '2px solid #C8374A' : '2px solid transparent',
+        })),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

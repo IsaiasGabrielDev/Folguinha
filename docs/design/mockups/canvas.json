@@ -1,0 +1,72 @@
+{
+  "artboards": [
+    {
+      "file": "Onboarding.dc.html",
+      "title": "Início · Funcionamento",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Painel",
+      "x": 470,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Escala.dc.html",
+      "title": "Escala da semana",
+      "x": 940,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Remanejar.dc.html",
+      "title": "Ocorrência e remanejamento",
+      "x": 1410,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Funcionario.dc.html",
+      "title": "Funcionário",
+      "x": 0,
+      "y": 984,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Feriados.dc.html",
+      "title": "Feriados",
+      "x": 470,
+      "y": 984,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Exportar.dc.html",
+      "title": "Exportar",
+      "x": 940,
+      "y": 984,
+      "w": 390,
+      "h": 844
+    }
+  ],
+  "annotations": [
+    {
+      "id": "direcao",
+      "x": 0,
+      "y": -170,
+      "w": 520,
+      "text": "Folguinha · direção \"suave e amigável\"\nCreme quente + coral (ação) + verde-água (ok). Cores por turno: manhã âmbar, tarde verde-água, noite lilás, folga neutra, ocorrência rosa.\nFontes: Fredoka (títulos) + Figtree (texto). Dados de exemplo."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

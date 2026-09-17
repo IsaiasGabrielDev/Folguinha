@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=Fredoka:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF7F2; font-family: 'Figtree', 'Segoe UI', system-ui, sans-serif; color: #2B2622; -webkit-font-smoothing: antialiased; }
+    a { color: #A9442A; } a:hover { color: #E4704F; }
+    * { box-sizing: border-box; }
+    p, h1, h2, h3 { margin: 0; text-wrap: pretty; }
+  </style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #FBF7F2; display: flex; flex-direction: column;">
+
+<div style="flex: 1 1 auto; padding: 56px 16px 24px; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; align-items: center; gap: 8px; margin-left: -8px;">
+    <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+    <h1 style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 28px; line-height: 1.15; letter-spacing: -0.2px; font-size: 24px;">Remanejar</h1>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="height: 5px; border-radius: 3px; background: #E4704F;"></div>
+      <span style="font-size: 11px; font-weight: 500; color: #9A9087;">Registro</span>
+    </div><div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="height: 5px; border-radius: 3px; background: #E4704F;"></div>
+      <span style="font-size: 11px; font-weight: 500; color: #9A9087;">Afetados</span>
+    </div><div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="height: 5px; border-radius: 3px; background: #E4704F;"></div>
+      <span style="font-size: 11px; font-weight: 700; color: #2B2622;">Substitutos</span>
+    </div><div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="height: 5px; border-radius: 3px; background: #E9E1D6;"></div>
+      <span style="font-size: 11px; font-weight: 500; color: #9A9087;">Aprovar</span>
+    </div>
+  </div>
+  <div style="background: #FFFFFF; border-radius: 22px; padding: 16px; box-shadow: 0 1px 2px rgba(60, 40, 20, 0.05), 0 8px 24px rgba(60, 40, 20, 0.05); ">
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 44px; height: 44px; flex: none; border-radius: 22px; background: #DDF3EE; color: #1E6E5E; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 18px;">BL</div>
+        <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-weight: 700; font-size: 16px;">Bruno Lima</span>
+          <span style="font-size: 13px; color: #6B625A;">Atestado · 14 e 15 de outubro</span>
+        </div>
+        <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #DDF3EE; color: #1E6E5E; font-size: 12px; font-weight: 600; white-space: nowrap; ">Aprovado</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: #F4EEE6; color: #6B625A; font-size: 12px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B625A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"></rect><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"></path></svg><span>Só o motivo administrativo fica salvo; detalhes médicos não.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; font-size: 14px;"><span>Qua 14 · Manhã · Caixa</span><span style="font-weight: 700; color: #1E6E5E;">Gabi</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 14px;"><span style="font-weight: 700;">Qui 15 · Manhã · Caixa</span><span style="font-weight: 700; color: #A9442A;">Escolhendo…</span></div>
+      </div>
+    </div></div>
+  <div style="display: flex; justify-content: space-between; align-items: baseline;">
+    <h2 style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 500; font-size: 18px; line-height: 1.25;">Quem pode cobrir qui 15</h2>
+    <span style="font-size: 12px; color: #9A9087; font-weight: 600;">3 pessoas</span>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    
+  <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; border: 1.5px solid #1F9E86; background: #F3FBF9; opacity: 1;">
+    <div style="width: 40px; height: 40px; flex: none; border-radius: 20px; background: #F4EEE6; color: #6B625A; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 16px;">HA</div>
+    <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+      <span style="font-weight: 700; font-size: 15px;">Hugo Alves</span>
+      <span style="font-size: 12px; color: #6B625A; line-height: 1.35;">Caixa · 36h de 44h na semana · sem hora extra</span>
+    </div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #DDF3EE; color: #1E6E5E; font-size: 12px; font-weight: 600; white-space: nowrap; ">Melhor opção</span>
+  </div>
+    
+  <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; border: 1.5px solid #E9E1D6; background: #FFFFFF; opacity: 1;">
+    <div style="width: 40px; height: 40px; flex: none; border-radius: 20px; background: #E6F2DC; color: #4C7A2A; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 16px;">GR</div>
+    <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+      <span style="font-weight: 700; font-size: 15px;">Gabi Rocha</span>
+      <span style="font-size: 12px; color: #6B625A; line-height: 1.35;">Caixa · já cobre qua 14 · gera 2h extras</span>
+    </div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #FFF1CC; color: #8A5A00; font-size: 12px; font-weight: 600; white-space: nowrap; ">+2h</span>
+  </div>
+    
+  <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; border: 1.5px solid #E9E1D6; background: #FFFFFF; opacity: 0.55;">
+    <div style="width: 40px; height: 40px; flex: none; border-radius: 20px; background: #F1E6F7; color: #7A3F99; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 16px;">EP</div>
+    <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+      <span style="font-weight: 700; font-size: 15px;">Elisa Prado</span>
+      <span style="font-size: 12px; color: #6B625A; line-height: 1.35;">Sai às 22h na quarta: descanso de 10h</span>
+    </div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #FCE1E4; color: #C8374A; font-size: 12px; font-weight: 600; white-space: nowrap; ">Bloqueio</span>
+  </div>
+  </div>
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 16px; background: #DDF3EE; color: #1E6E5E; font-size: 13px; font-weight: 600;">
+    <span>Cobertura 100%</span><span>0h extras</span><span>2 pessoas afetadas</span>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <div style="flex: 1 1 0; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; background: #E4704F; color: #FFFFFF; box-shadow: 0 6px 16px rgba(228, 112, 79, 0.28); ">Aprovar e criar v4</div>
+  </div>
+</div>
+</div>
+</x-dc>
+
+</body>
+</html>

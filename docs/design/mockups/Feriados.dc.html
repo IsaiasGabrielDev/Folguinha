@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=Fredoka:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF7F2; font-family: 'Figtree', 'Segoe UI', system-ui, sans-serif; color: #2B2622; -webkit-font-smoothing: antialiased; }
+    a { color: #A9442A; } a:hover { color: #E4704F; }
+    * { box-sizing: border-box; }
+    p, h1, h2, h3 { margin: 0; text-wrap: pretty; }
+  </style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #FBF7F2; display: flex; flex-direction: column;">
+
+<div style="flex: 1 1 auto; padding: 56px 16px 24px; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-left: -8px;">
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+      <h1 style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 28px; line-height: 1.15; letter-spacing: -0.2px; font-size: 24px;">Feriados</h1>
+    </div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #FFFFFF; color: #2B2622; font-size: 12px; font-weight: 600; white-space: nowrap; height: 34px; padding: 0 14px; font-size: 14px; border: 1.5px solid #E9E1D6;">2026</span>
+  </div>
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: #6B625A;">
+    <span>Nacionais pela BrasilAPI · atualizado hoje</span>
+    <span style="display: flex; align-items: center; gap: 4px; font-weight: 700; color: #A9442A;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A9442A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"></path></svg>Atualizar</span>
+  </div>
+  <div style="background: #FFFFFF; border-radius: 22px; padding: 16px; box-shadow: 0 1px 2px rgba(60, 40, 20, 0.05), 0 8px 24px rgba(60, 40, 20, 0.05); background: #F3FBF9;"><div style="display: flex; align-items: center; gap: 12px;">
+    <div style="width: 40px; height: 40px; flex: none; border-radius: 14px; background: #DDF3EE; color: #1E6E5E; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3M17 17H5l3 3"></path></svg></div>
+    <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px;">
+      <span style="font-weight: 700; font-size: 15px;">Rodízio de feriados</span>
+      <span style="font-size: 12px; line-height: 1.4; color: #6B625A;">Quem trabalhou no último feriado tem prioridade para folgar no próximo.</span>
+    </div>
+    <div style="width: 46px; height: 28px; flex: none; border-radius: 14px; padding: 3px; background: #1F9E86; display: flex; justify-content: flex-end;"><div style="width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.18);"></div></div>
+  </div></div>
+  <div style="display: flex; justify-content: space-between; align-items: baseline;">
+    <h2 style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 500; font-size: 18px; line-height: 1.25;">Próximos</h2>
+    <span style="font-size: 12px; color: #9A9087; font-weight: 600;">Desligado = dia normal</span>
+  </div>
+  <div style="background: #FFFFFF; border-radius: 22px; padding: 16px; box-shadow: 0 1px 2px rgba(60, 40, 20, 0.05), 0 8px 24px rgba(60, 40, 20, 0.05); padding: 4px 16px;"><div style="display: flex; flex-direction: column;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+  <div style="width: 50px; height: 54px; flex: none; border-radius: 16px; background: #FCE9E2; color: #A9442A; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;">
+    <span style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 20px;">12</span>
+    <span style="font-size: 11px; font-weight: 700;">OUT</span>
+  </div>
+  <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+    <span style="font-weight: 700; font-size: 15px; line-height: 1.25; color: #2B2622;">Nossa Senhora Aparecida</span>
+    <span style="font-size: 12px; color: #9A9087;">Segunda · Nacional</span>
+    <span style="font-size: 12px; color: #1E6E5E; font-weight: 600;">Folgam Carla e Diego (trabalharam em 7/9)</span>
+  </div>
+  <div style="width: 46px; height: 28px; flex: none; border-radius: 14px; padding: 3px; background: #1F9E86; display: flex; justify-content: flex-end;"><div style="width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.18);"></div></div>
+</div>
+    <div style="height: 1px; background: #E9E1D6;"></div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+  <div style="width: 50px; height: 54px; flex: none; border-radius: 16px; background: #F4EEE6; color: #9A9087; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;">
+    <span style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 20px;">28</span>
+    <span style="font-size: 11px; font-weight: 700;">OUT</span>
+  </div>
+  <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+    <span style="font-weight: 700; font-size: 15px; line-height: 1.25; color: #9A9087;">Dia do Servidor Público</span>
+    <span style="font-size: 12px; color: #9A9087;">Quarta · Adicionado por você</span>
+    
+  </div>
+  <div style="width: 46px; height: 28px; flex: none; border-radius: 14px; padding: 3px; background: #E9E1D6; display: flex; justify-content: flex-start;"><div style="width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.18);"></div></div>
+</div>
+    <div style="height: 1px; background: #E9E1D6;"></div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+  <div style="width: 50px; height: 54px; flex: none; border-radius: 16px; background: #FCE9E2; color: #A9442A; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;">
+    <span style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 20px;">2</span>
+    <span style="font-size: 11px; font-weight: 700;">NOV</span>
+  </div>
+  <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+    <span style="font-weight: 700; font-size: 15px; line-height: 1.25; color: #2B2622;">Finados</span>
+    <span style="font-size: 12px; color: #9A9087;">Segunda · Nacional</span>
+    
+  </div>
+  <div style="width: 46px; height: 28px; flex: none; border-radius: 14px; padding: 3px; background: #1F9E86; display: flex; justify-content: flex-end;"><div style="width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.18);"></div></div>
+</div>
+    <div style="height: 1px; background: #E9E1D6;"></div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+  <div style="width: 50px; height: 54px; flex: none; border-radius: 16px; background: #FCE9E2; color: #A9442A; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;">
+    <span style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 20px;">20</span>
+    <span style="font-size: 11px; font-weight: 700;">NOV</span>
+  </div>
+  <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+    <span style="font-weight: 700; font-size: 15px; line-height: 1.25; color: #2B2622;">Consciência Negra</span>
+    <span style="font-size: 12px; color: #9A9087;">Sexta · Nacional</span>
+    
+  </div>
+  <div style="width: 46px; height: 28px; flex: none; border-radius: 14px; padding: 3px; background: #1F9E86; display: flex; justify-content: flex-end;"><div style="width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.18);"></div></div>
+</div>
+    <div style="height: 1px; background: #E9E1D6;"></div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+  <div style="width: 50px; height: 54px; flex: none; border-radius: 16px; background: #FCE9E2; color: #A9442A; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;">
+    <span style="font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; font-weight: 600; font-size: 20px;">8</span>
+    <span style="font-size: 11px; font-weight: 700;">DEZ</span>
+  </div>
+  <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+    <span style="font-weight: 700; font-size: 15px; line-height: 1.25; color: #2B2622;">Nossa Senhora da Conceição</span>
+    <span style="font-size: 12px; color: #9A9087;">Terça · Municipal · adicionado por você</span>
+    
+  </div>
+  <div style="width: 46px; height: 28px; flex: none; border-radius: 14px; padding: 3px; background: #1F9E86; display: flex; justify-content: flex-end;"><div style="width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.18);"></div></div>
+</div>
+  </div></div>
+  <div style="flex: 1 1 0; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; background: #FFFFFF; color: #2B2622; border: 1.5px solid #E9E1D6; flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Adicionar feriado</div>
+</div>
+</div>
+</x-dc>
+
+</body>
+</html>
