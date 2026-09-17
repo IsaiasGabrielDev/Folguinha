@@ -55,7 +55,9 @@
   - Verify: `dotnet test Folguinha.slnx` → 127 testes
 
 ## Fase 7 — Exportação
-- [ ] Planilha individual (§12.1), consolidada (§12.2) e relatório de validação (§12.3)
+- [x] `ExportacaoEscala`: Calendário (grade colorida com filtro), Lista (formato longo com filtro), uma aba por funcionário (§12.1: identificação, entrada/intervalo sugerido/saída, totais por semana e período, horas extras previstas, domingos/feriados, observações, versão) e Validação (§12.3)
+- [x] Exporta rascunho (identificado) ou qualquer versão; ausências sem motivo (LGPD)
+  - Verify: 135 testes; exportação completa validada com o OpenXmlValidator (0 erros)
 
 ## Fase 8 — Telas
 - [ ] Ver SPEC.md "Telas"

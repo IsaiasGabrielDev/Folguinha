@@ -27,6 +27,9 @@ public sealed record Funcionario(
     bool PermiteHoraExtra = false,
     TimeSpan LimiteHoraExtraSemanal = default)
 {
+    public string? Matricula { get; init; }
+    public string? Cargo { get; init; }
+    public string? Setor { get; init; }
     public IReadOnlyList<Guid>? Funcoes { get; init; }
     public IReadOnlyList<Guid>? Turnos { get; init; }
     public Guid? TurnoPrincipal { get; init; }

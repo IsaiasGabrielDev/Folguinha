@@ -15,6 +15,7 @@ public sealed record DadosDaUnidade
     /// Leu o aviso de que o app não substitui DP/contador/jurídico (ESPEC §1).
     public bool AceitouAviso { get; init; }
     public Empresa? Empresa { get; init; }
+    public string NomeUnidade { get; init; } = "";
     public IReadOnlyList<Funcionario> Funcionarios { get; init; } = [];
     public IReadOnlyList<Turno> Turnos { get; init; } = [];
     public IReadOnlyList<Funcao> Funcoes { get; init; } = [];
