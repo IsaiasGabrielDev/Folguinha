@@ -9,9 +9,10 @@
 ## Fase 2 — Spike web (substitui o spike mobile; beta virou PWA em 16/09)
 - [x] Remover projetos Avalonia; criar `src/Folguinha.Web` (Blazor WASM PWA) referenciando Application/Infrastructure
   - Verify: `dotnet build Folguinha.slnx`; `dotnet run --project src/Folguinha.Web` responde e serve `manifest.webmanifest`
-- [ ] IndexedDB via JS interop: salvar/ler o estado; `navigator.storage.persist()`; backup exportar/importar
-- [ ] Gerar .xlsx no navegador e baixar/compartilhar (Web Share API)
-- [ ] Testar no Safari do iPhone e no Chrome do Android (instalado na tela inicial)
+- [x] IndexedDB via JS interop (`wwwroot/js/folguinha.js`, `Servicos/Navegador.cs`); `navigator.storage.persist()`; backup exportar/importar (`RepositorioDados`, JSON gerado em compilação)
+- [x] .xlsx sem dependências (`Infrastructure/Planilhas/PlanilhaXlsx.cs`), validado contra o schema Open XML (0 erros); entrega por Web Share API no celular ou download
+- [x] Página `/diagnostico` com autoteste; `tools/navegador.mjs` (Edge headless via DevTools) → "AUTOTESTE OK"
+- [ ] Testar no Safari do iPhone e no Chrome do Android (depende do site publicado — Fase 9)
 
 ## Fase 3 — Domain: modelo + regras
 - [x] Entidades: Empresa, Funcao, Turno, Funcionario, Demanda, Feriado, Ocorrencia, Alocacao (TenantId/Unidade ficam na persistência)

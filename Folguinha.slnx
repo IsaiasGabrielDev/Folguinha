@@ -8,5 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Folguinha.Domain.Tests/Folguinha.Domain.Tests.csproj" />
     <Project Path="tests/Folguinha.Application.Tests/Folguinha.Application.Tests.csproj" />
+    <Project Path="tests/Folguinha.Infrastructure.Tests/Folguinha.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

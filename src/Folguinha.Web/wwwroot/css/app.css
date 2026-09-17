@@ -87,3 +87,10 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+.diagnostico { max-width: 40rem; margin: 0 auto; padding: 1.5rem 1rem; font-family: system-ui, sans-serif; }
+.diagnostico dl { display: grid; grid-template-columns: auto 1fr; gap: .25rem 1rem; }
+.diagnostico dt { font-weight: 600; }
+.diagnostico .acoes { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+.diagnostico button, .diagnostico .botao { min-height: 44px; padding: 0 1rem; border-radius: 12px; border: 1px solid #ccc; background: #fff; font: inherit; cursor: pointer; display: inline-flex; align-items: center; }
+.diagnostico .botao input { display: none; }
+.diagnostico .registro { font-family: ui-monospace, monospace; font-size: .85rem; padding-left: 1rem; }

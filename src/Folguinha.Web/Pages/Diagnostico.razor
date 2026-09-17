@@ -1,0 +1,184 @@
+@page "/diagnostico"
+@using System.Diagnostics
+@using Folguinha.Application
+@using Folguinha.Domain
+@using Folguinha.Domain.Geracao
+@using Folguinha.Domain.Regras
+@using Folguinha.Infrastructure.Planilhas
+@using Folguinha.Web.Servicos
+@inject Navegador Navegador
+@inject RepositorioDados Repositorio
+@inject NavigationManager Nav
+
+<PageTitle>Diagnóstico · Folguinha</PageTitle>
+
+<main class="diagnostico">
+    <h1>Diagnóstico</h1>
+    <p>Testa o armazenamento, o motor de escalas e a planilha neste aparelho.</p>
+
+    <dl>
+        <dt>Armazenamento</dt><dd>@_persistencia</dd>
+        <dt>Instalado na tela inicial</dt><dd>@(_instalado ? "sim" : "não")</dd>
+        <dt>Espaço usado</dt><dd>@(_espacoKb < 0 ? "?" : $"{_espacoKb} KB")</dd>
+        <dt>Dados salvos</dt><dd>@Resumo(_dados)</dd>
+    </dl>
+
+    <div class="acoes">
+        <button @onclick="CriarExemplo">Criar loja de exemplo</button>
+        <button @onclick="Recarregar">Ler de novo</button>
+        <button @onclick="GerarEscala" disabled="@(_dados.Funcionarios.Count == 0)">Gerar outubro/2026</button>
+        <button @onclick="BaixarPlanilha" disabled="@(_dados.Alocacoes.Count == 0)">Planilha de teste</button>
+        <button @onclick="ExportarBackup" disabled="@(_dados.Empresa is null)">Exportar backup</button>
+        <label class="botao">Importar backup <InputFile OnChange="ImportarBackup" accept=".json,application/json" /></label>
+        <button @onclick="Apagar">Apagar tudo</button>
+    </div>
+
+    <ul class="registro" aria-live="polite">
+        @foreach (var linha in _registro)
+        {
+            <li>@linha</li>
+        }
+    </ul>
+</main>
+
+@code {
+    [SupplyParameterFromQuery] public bool Autoteste { get; set; }
+
+    DadosDaUnidade _dados = new();
+    string _persistencia = "…";
+    bool _instalado;
+    int _espacoKb = -1;
+    readonly List<string> _registro = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _persistencia = await Navegador.PedirPersistencia() switch
+        {
+            "persistente" => "persistente (o navegador não apaga sozinho)",
+            "temporario" => "temporário (instale na tela inicial para proteger os dados)",
+            _ => "sem suporte a persistência",
+        };
+        _instalado = await Navegador.Instalado();
+        await Recarregar();
+        if (Autoteste) await RodarAutoteste();
+    }
+
+    static string Resumo(DadosDaUnidade d) => d.Empresa is null
+        ? "nenhum"
+        : $"{d.Empresa.Nome}: {d.Funcionarios.Count} pessoas, {d.Turnos.Count} turnos, {d.Alocacoes.Count} alocações";
+
+    void Log(string texto) => _registro.Insert(0, $"{DateTime.Now:HH:mm:ss} {texto}");
+
+    async Task Recarregar()
+    {
+        _dados = await Repositorio.Carregar();
+        _espacoKb = await Navegador.EspacoUsadoKb();
+    }
+
+    async Task CriarExemplo()
+    {
+        await Repositorio.Salvar(Exemplo.Loja());
+        await Recarregar();
+        Log("Loja de exemplo salva.");
+    }
+
+    async Task GerarEscala()
+    {
+        var relogio = Stopwatch.StartNew();
+        var r = GeradorEscala.Gerar(new EntradaGeracao
+        {
+            Empresa = _dados.Empresa!,
+            Inicio = new(2026, 10, 1),
+            Fim = new(2026, 10, 31),
+            Funcionarios = _dados.Funcionarios,
+            Turnos = _dados.Turnos,
+            Funcoes = _dados.Funcoes,
+            Demandas = _dados.Demandas,
+            Feriados = _dados.Feriados,
+            Ocorrencias = _dados.Ocorrencias,
+            Funcionamento = _dados.Funcionamento,
+        });
+        await Repositorio.Salvar(_dados with { Alocacoes = r.Alocacoes });
+        await Recarregar();
+        var porSeveridade = string.Join(", ", r.Violacoes.GroupBy(v => v.Severidade).Select(g => $"{g.Key}: {g.Count()}"));
+        Log($"Escala gerada em {relogio.ElapsedMilliseconds} ms; {r.Alocacoes.Count} alocações; avisos: {(porSeveridade == "" ? "nenhum" : porSeveridade)}.");
+    }
+
+    byte[] Planilha()
+    {
+        var turnos = _dados.Turnos.ToDictionary(t => t.Id);
+        var abas = _dados.Funcionarios.Select(f => new Aba(f.Nome)
+        {
+            Linhas =
+            [
+                [new("Data", EstiloCelula.Cabecalho), new("Situação", EstiloCelula.Cabecalho), new("Entrada", EstiloCelula.Cabecalho),
+                 new("Saída", EstiloCelula.Cabecalho), new("Horas", EstiloCelula.Cabecalho)],
+                .. _dados.Alocacoes.Where(a => a.FuncionarioId == f.Id).OrderBy(a => a.Data).Select(a => (IReadOnlyList<Celula>)(a.Trabalha
+                    ? [new(Texto.Dia(a.Data)), new(turnos.GetValueOrDefault(a.TurnoId ?? default)?.Nome ?? "Trabalho", EstiloCelula.Manha),
+                       new(Texto.Hora(a.Inicio)), new(Texto.Hora(a.Fim)), new(Math.Round(a.HorasComputadas.TotalHours, 2))]
+                    : [new(Texto.Dia(a.Data)), new(a.Tipo == TipoAlocacao.Folga ? "Folga" : "Ausência", EstiloCelula.Folga)])),
+            ],
+            Larguras = [12, 14, 9, 9, 8],
+            Filtro = true,
+            CongelarCabecalho = true,
+        }).ToList();
+        return PlanilhaXlsx.Gerar(abas);
+    }
+
+    async Task BaixarPlanilha()
+    {
+        var bytes = Planilha();
+        var resultado = await Navegador.EntregarArquivo("folguinha-teste.xlsx", Navegador.TipoXlsx, bytes);
+        Log($"Planilha ({bytes.Length / 1024} KB): {resultado}.");
+    }
+
+    async Task ExportarBackup()
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(RepositorioDados.ParaBackup(_dados));
+        var resultado = await Navegador.EntregarArquivo($"folguinha-backup-{DateTime.Now:yyyy-MM-dd}.json", "application/json", bytes);
+        Log($"Backup ({bytes.Length / 1024} KB): {resultado}.");
+    }
+
+    async Task ImportarBackup(InputFileChangeEventArgs e)
+    {
+        using var leitor = new StreamReader(e.File.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024));
+        var dados = RepositorioDados.DeBackup(await leitor.ReadToEndAsync());
+        if (dados is null)
+        {
+            Log("Esse arquivo não é um backup do Folguinha.");
+            return;
+        }
+        await Repositorio.Salvar(dados);
+        await Recarregar();
+        Log("Backup importado.");
+    }
+
+    async Task Apagar()
+    {
+        await Repositorio.Apagar();
+        await Recarregar();
+        Log("Dados apagados.");
+    }
+
+    /// Roda tudo sem interação (?autoteste=true) e escreve AUTOTESTE OK/FALHOU no registro.
+    async Task RodarAutoteste()
+    {
+        try
+        {
+            await CriarExemplo();
+            await GerarEscala();
+            var gravado = _dados.Alocacoes.Count;
+            var backup = RepositorioDados.ParaBackup(_dados);
+            await Apagar();
+            await Repositorio.Salvar(RepositorioDados.DeBackup(backup)!);
+            await Recarregar();
+            var planilha = Planilha();
+            var ok = gravado == 31 * 8 && _dados.Alocacoes.Count == gravado && planilha.Length > 1000;
+            Log(ok ? $"AUTOTESTE OK (planilha {planilha.Length} bytes)" : $"AUTOTESTE FALHOU ({gravado}/{_dados.Alocacoes.Count}/{planilha.Length})");
+        }
+        catch (Exception ex)
+        {
+            Log($"AUTOTESTE FALHOU: {ex}");
+        }
+    }
+}
