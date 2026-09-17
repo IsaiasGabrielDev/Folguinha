@@ -3,16 +3,7 @@
     <Project Path="src/Folguinha.Domain/Folguinha.Domain.csproj" />
     <Project Path="src/Folguinha.Application/Folguinha.Application.csproj" />
     <Project Path="src/Folguinha.Infrastructure/Folguinha.Infrastructure.csproj" />
-    <Project Path="src/Folguinha.App/Folguinha.App.csproj" />
-    <Project Path="src/Folguinha.App.Desktop/Folguinha.App.Desktop.csproj" />
-  </Folder>
-  <Folder Name="/mobile/">
-    <Project Path="src/Folguinha.App.Android/Folguinha.App.Android.csproj">
-      <Deploy />
-    </Project>
-    <Project Path="src/Folguinha.App.iOS/Folguinha.App.iOS.csproj">
-      <Deploy />
-    </Project>
+    <Project Path="src/Folguinha.Web/Folguinha.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Folguinha.Domain.Tests/Folguinha.Domain.Tests.csproj" />

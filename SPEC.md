@@ -1,4 +1,4 @@
-# Folguinha: gerenciador de folgas e escalas (iOS + Android)
+# Folguinha: gerenciador de folgas e escalas (PWA para celular e computador)
 
 ## Contexto
 O gestor precisa montar escalas de trabalho e folga que respeitem a CLT e a operação da empresa. Hoje isso é feito na mão e dá erro: domingo sem folga, descanso entre jornadas desrespeitado, turno sem cobertura. O **Folguinha** é um app gerencial (SaaS, foco inicial no comércio/varejo) que gera, valida, versiona e exporta escalas.
@@ -8,8 +8,8 @@ Fonte funcional: [`docs/especificacao.md`](docs/especificacao.md) (doravante **E
 ### Decisões tomadas
 | Tema | Decisão |
 |---|---|
-| Linguagem / UI | C# (.NET 10 LTS) + Avalonia (o usuário já domina); visual próprio igual em iOS e Android |
-| Backend | Arquitetura de backend C# **desde já** (domínio + casos de uso + repositórios). No **beta** ela roda **dentro do app**, com SQLite local e só o gerente usando. Depois a mesma camada vira uma API ASP.NET Core + PostgreSQL online |
+| Linguagem / UI | C# (.NET 10 LTS) + **Blazor WebAssembly PWA** (decisão de 16/09/2026, substituiu o Avalonia nativo). Roda no navegador, instala na tela inicial do iPhone/Android, funciona offline. Sem loja, sem Mac, sem Android SDK |
+| Backend | Arquitetura de backend C# **desde já** (domínio + casos de uso + repositórios). No **beta** ela roda **dentro do navegador**, com dados no IndexedDB e só o gerente usando. Depois a mesma camada vira uma API ASP.NET Core + PostgreSQL online |
 | Público | SaaS multiempresa: `TenantId` (empresa) em todas as entidades desde o início |
 | Unidades | Modelo com Unidade/Setor, mas o beta opera **uma unidade** |
 | Demanda | Por **dia × turno × função** (mínimo e ideal). Faixas de 30/60 min ficam para depois |
@@ -17,7 +17,7 @@ Fonte funcional: [`docs/especificacao.md`](docs/especificacao.md) (doravante **E
 | Período | Semana, quinzena ou mês |
 | Saída | .xlsx individual + consolidado + relatório de validação |
 | Feriados | BrasilAPI + cache + editar/ignorar/adicionar. Rodízio: quem trabalhou no último feriado tem prioridade de folga |
-| iOS | Só o iPhone não basta: é preciso macOS para compilar. Solução: GitHub Actions (runner macOS) + conta Apple Developer (US$ 99/ano) + TestFlight no seu iPhone. O desenvolvimento roda em Desktop + Android |
+| Distribuição | Site estático (ex.: GitHub Pages, Azure Static Web Apps ou Cloudflare Pages) com HTTPS. No iPhone: Safari → Compartilhar → Adicionar à Tela de Início. No Android: Chrome → Instalar app |
 
 ## Arquitetura (pronta para virar online)
 ```
@@ -25,19 +25,18 @@ Folguinha.Domain        → entidades, value objects, regras CLT, gerador, valid
 Folguinha.Application   → casos de uso (GerarEscala, ValidarEscala, RegistrarOcorrencia,
                           SugerirSubstitutos, PublicarVersao, Exportar), interfaces de repositório,
                           IFeriadoProvider, IClock, IUsuarioAtual
-Folguinha.Infrastructure→ EF Core (SQLite no beta; PostgreSQL no servidor), BrasilApiFeriadoProvider,
-                          exportação .xlsx (ClosedXML)
-Folguinha.App           → UI Avalonia (MVVM, CommunityToolkit.Mvvm) chamando Application
-                          diretamente no beta (depois: cliente HTTP da API com a mesma interface)
-Folguinha.App.Desktop / .Android / .iOS → cabeças de plataforma (compartilhar arquivo nativo)
+Folguinha.Infrastructure→ BrasilApiFeriadoProvider, exportação .xlsx; na fase online: EF Core + PostgreSQL
+Folguinha.Web           → PWA Blazor WebAssembly: telas, persistência no IndexedDB (JS interop),
+                          chama Application direto no beta (depois: cliente HTTP da API, mesma interface)
 Folguinha.Api           → (fase online) ASP.NET Core reaproveitando Application + Infrastructure
 tests/Folguinha.Domain.Tests, tests/Folguinha.Application.Tests → xUnit
 ```
 **Como o app troca de "local" para "online":** a UI depende de interfaces de serviço (`IEscalaService` etc.). No beta a implementação é local (in-process). Depois vira uma implementação HTTP. As telas não mudam.
 
-**Riscos a validar cedo no iOS (AOT):**
-- **EF Core SQLite:** plano B é sqlite-net.
-- **ClosedXML:** plano B é MiniExcel.
+**Riscos a validar cedo no navegador (WebAssembly):**
+- **Biblioteca de .xlsx:** confirmar que roda em WASM e o tamanho do download; plano B é gerar o .xlsx com `System.IO.Compression` + OpenXML mínimo.
+- **IndexedDB:** o Safari do iPhone pode apagar dados de sites não instalados após 7 dias sem uso. Mitigação: instalar na tela inicial, pedir `navigator.storage.persist()` e oferecer backup (exportar/importar arquivo).
+- **Tamanho do primeiro carregamento:** usar trimming e compressão no publish.
 
 Local do repositório: `C:\Users\Isaias\source\repos\Folguinha`.
 
@@ -50,7 +49,7 @@ Local do repositório: `C:\Users\Isaias\source\repos\Folguinha`.
 3. **Turnos** e **demanda por dia × turno × função** (mínimo/ideal), com demanda especial por data.
 4. **Regras configuráveis** com nível **Obrigatória / Alerta / Preferência** (§2) e **versionadas** (fonte, vigência, versão, responsável; §7.2). Mudar uma regra não altera escalas encerradas.
 5. **Geração automática** (semana/quinzena/mês) na ordem de prioridade da §8.
-6. **Ajuste manual** com revalidação imediata e impacto (cobertura, jornada, descanso, horas extras, afetados). Arrastar e soltar na grade, se o Avalonia mobile permitir bem; senão, tocar + escolher.
+6. **Ajuste manual** com revalidação imediata e impacto (cobertura, jornada, descanso, horas extras, afetados). Arrastar e soltar na grade no computador; no celular, tocar + escolher.
 7. **Alertas** com severidade Bloqueio / Crítico / Atenção / Informativo e **mensagem explicativa com sugestão** (§7.3).
 8. **Ocorrências e remanejamento** (§9): tipos da §9.1, turnos afetados, **substitutos ranqueados** (§9.2), simulação de impacto, aprovação e nova versão.
 9. **Ciclo de vida** Rascunho → Em validação → Validada → Publicada → Alterada → Encerrada. Uma escala publicada nunca é sobrescrita: cada alteração gera uma versão com diff, autor, motivo e afetados (§14).
@@ -58,12 +57,12 @@ Local do repositório: `C:\Users\Isaias\source\repos\Folguinha`.
     - planilha **individual** com todas as colunas da §12.1;
     - planilha **consolidada** em calendário, com filtros automáticos do Excel;
     - **relatório de validação** (§12.3).
-    Tudo é compartilhado pelo menu nativo.
+    No celular, o arquivo é compartilhado pelo menu do sistema (Web Share API); no computador, é baixado.
 11. **Painel gerencial** (§11): turnos sem cobertura, funções descobertas, excesso/falta de horas, horas extras previstas, descanso irregular, domingos/feriados, distribuição desigual.
 12. **Feriados** (BrasilAPI) e **rodízio de feriado** (detalhes abaixo).
 13. **LGPD no beta:**
     - a ocorrência guarda só o **tipo/motivo administrativo**, nunca o diagnóstico;
-    - o app pode ser bloqueado com biometria do aparelho;
+    - dados ficam só no aparelho do gerente (sem servidor no beta); backup é um arquivo que o próprio gerente guarda;
     - exportar/excluir dados de um funcionário.
 
 **Fica para a fase online:**
@@ -94,7 +93,7 @@ Toda regra implementa `IRegra { Validar(contexto) → Violacao[] }` e traz níve
 O app mostra sempre o aviso da ESPEC §1: o app não substitui o DP, o contador nem o jurídico, e a convenção coletiva pode alterar as regras.
 
 ## Gerador (Domain)
-Heurística determinística em C# puro (sem solver nativo, para portar bem no mobile), seguindo as prioridades da §8:
+Heurística determinística em C# puro (sem solver nativo, roda no navegador), seguindo as prioridades da §8:
 1. **Base de folgas por regime:**
    - **12x36:** alternância em grupos defasados;
    - **6x1 e 5x2:** rodízio de folgas nos dias de menor demanda, garantindo o domingo no prazo legal;
@@ -129,15 +128,15 @@ Heurística determinística em C# puro (sem solver nativo, para portar bem no mo
 6. **Histórico de versões** e **Exportar** (individual / consolidado / relatório).
 
 ## Ordem de implementação (fatias verificáveis)
-1. Solution, projetos, git, `docs/especificacao.md`, `SPEC.md`, `tasks/plan.md`, `tasks/todo.md`. A cabeça Desktop abre.
-2. **Spike iOS/Android:** EF Core SQLite + ClosedXML rodando no Android e no build iOS da CI. Decide os planos B cedo.
+1. Solution, projetos, git, `docs/especificacao.md`, `SPEC.md`, `tasks/plan.md`, `tasks/todo.md`. ✅
+2. ~~Spike iOS/Android~~ → **Spike web:** IndexedDB + .xlsx rodando no navegador (inclusive Safari do iPhone).
 3. Domain: entidades (com TenantId) + motor de regras com xUnit (um teste por regra e mensagem).
 4. Domain: gerador 6x1/5x2 → 12x36 → personalizado, com cenários (varejo com 8 pessoas, fim de semana com demanda menor, funções).
 5. Domain: feriados + rodízio de feriado + ocorrências + substitutos + alocações travadas.
-6. Application + Infrastructure: casos de uso, EF Core SQLite, versionamento/ciclo de vida, BrasilAPI com cache.
+6. Application + Infrastructure: casos de uso, persistência (IndexedDB no beta), versionamento/ciclo de vida, BrasilAPI com cache.
 7. Export: individual, consolidado e relatório de validação.
 8. UI: mockups aprovados → onboarding → painel → grade/ajuste → ocorrências → histórico → exportar/compartilhar.
-9. Android no aparelho; iOS via GitHub Actions → TestFlight.
+9. Publicar o PWA (site estático com HTTPS) e testar instalado no iPhone e no Android.
 10. (Fase online) Folguinha.Api + PostgreSQL + login/perfis + funcionário consultando.
 
 ## Skills usadas em cada etapa
@@ -149,33 +148,31 @@ Heurística determinística em C# puro (sem solver nativo, para portar bem no mo
 | Decisões de alto risco (motor CLT, versionamento, migração local → online) | `doubt-driven-development` |
 | Barra de qualidade (cobertura das regras, sem testes pulados) | `constraint-driven-development` |
 | Layout: mockups de todas as telas (canvas editável) antes de codar | `design` |
-| Implementação das telas Avalonia (acessibilidade, responsivo, visual) | `frontend-ui-engineering` |
+| Implementação das telas Blazor (acessibilidade, responsivo, visual) | `frontend-ui-engineering` + `browser-testing-with-devtools` |
 | Código em fatias com testes | `incremental-implementation` + `test-driven-development` |
 | LGPD, dados de saúde, chamada à BrasilAPI | `security-and-hardening` |
 | Evitar over-engineering | `ponytail` |
-| Git, commits e CI iOS | `git-workflow-and-versioning` + `ci-cd-and-automation` |
+| Git, commits, CI e publicação do site | `git-workflow-and-versioning` + `ci-cd-and-automation` |
 | Revisão antes de cada merge | `code-review-and-quality` |
 
 ## Verificação
 - `dotnet test`: regras CLT, gerador, rodízio de feriado, remanejamento e versionamento passam.
-- `dotnet run --project src/Folguinha.App.Desktop`: onboarding completo → gerar o mês → sem violação Obrigatória → registrar atestado → substituto sugerido → publicar v2 → histórico mostra o diff.
+- `dotnet run --project src/Folguinha.Web`: onboarding completo → gerar o mês → sem violação Obrigatória → registrar atestado → substituto sugerido → publicar v2 → histórico mostra o diff.
 - Feriados: carregar o ano da BrasilAPI, ignorar um, adicionar um municipal; gerar dois meses seguidos e conferir que quem trabalhou no feriado anterior folga no seguinte.
 - Abrir os .xlsx no Excel: colunas da §12.1, consolidado com filtros, relatório de validação.
-- Android (emulador/aparelho) e iOS (TestFlight): gerar e compartilhar a planilha.
+- PWA publicado, instalado no iPhone e no Android: abre offline, gera e compartilha a planilha.
 
 ## Pontos em aberto (não bloqueiam)
 - Art. 386 (revezamento quinzenal com domingo para mulheres): regra opcional?
-- Identificador do app: `com.<seu-dominio>.folguinha`?
+- Domínio/endereço do site do beta.
 - Convenção coletiva: no beta, só regras editáveis manualmente (sem biblioteca de CCTs).
 
 ## Comandos
 ```
-Build (Windows, sem mobile):  dotnet build Folguinha.Core.slnf
-Testes:                       dotnet test Folguinha.Core.slnf
-Rodar desktop:                dotnet run --project src/Folguinha.App.Desktop
-Android (requer workload):    dotnet workload install android
-                              dotnet build src/Folguinha.App.Android -t:Run
-iOS:                          só na CI macOS (GitHub Actions) → TestFlight
+Build:           dotnet build Folguinha.slnx
+Testes:          dotnet test Folguinha.slnx
+Rodar o PWA:     dotnet run --project src/Folguinha.Web      (abre em http://localhost:5xxx)
+Publicar:        dotnet publish src/Folguinha.Web -c Release  (site estático em bin/Release/net10.0/publish/wwwroot)
 ```
 
 ## Estilo de código
