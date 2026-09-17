@@ -34,7 +34,16 @@ public class RepositorioDadosTests
             Feriados = [new Feriado(new DateOnly(2026, 10, 12), "Nossa Senhora Aparecida", AbrangenciaFeriado.Nacional, Considerado: false)],
             Ocorrencias = [new Ocorrencia(Guid.NewGuid(), ana.Id, TipoOcorrencia.Ferias, new(2026, 11, 2), new(2026, 11, 11))],
             Funcionamento = [new PeriodoFuncionamento(DayOfWeek.Friday, new(8, 0), new(23, 30))],
-            Alocacoes = [Alocacao.Trabalho(ana.Id, new(2026, 10, 5), new(8, 0), new(16, 20), TimeSpan.FromHours(1), manha.Id, caixa.Id) with { Travada = true }],
+            Escalas =
+            [
+                new Escala(Guid.NewGuid(), new(2026, 10, 5), new(2026, 10, 11))
+                {
+                    Rascunho = [Alocacao.Trabalho(ana.Id, new(2026, 10, 5), new(8, 0), new(16, 20), TimeSpan.FromHours(1), manha.Id, caixa.Id) with { Travada = true }],
+                    Versoes = [new VersaoEscala(1, new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.FromHours(-3)), "Gerente", "Primeira publicação",
+                        [Alocacao.Folga(ana.Id, new(2026, 10, 5))]) { Afetados = [ana.Id] }],
+                },
+            ],
+            RegrasConfiguradas = [new RegraConfigurada("op.cobertura", Domain.Regras.NivelRegra.Preferencia, new(2026, 10, 1), 2, "Gerente", DateTimeOffset.UnixEpoch)],
         };
     }
 
@@ -65,7 +74,13 @@ public class RepositorioDadosTests
         Assert.Equal(original.Feriados, lido.Feriados);
         Assert.Equal(original.Ocorrencias, lido.Ocorrencias);
         Assert.Equal(original.Funcionamento, lido.Funcionamento);
-        Assert.Equal(original.Alocacoes, lido.Alocacoes);
+        Assert.Equal(original.RegrasConfiguradas, lido.RegrasConfiguradas);
+        var escala = Assert.Single(lido.Escalas);
+        Assert.Equal(original.Escalas[0].Rascunho, escala.Rascunho);
+        var versao = Assert.Single(escala.Versoes);
+        Assert.Equal(original.Escalas[0].Versoes[0].Alocacoes, versao.Alocacoes);
+        Assert.Equal(original.Escalas[0].Versoes[0].Afetados, versao.Afetados);
+        Assert.Equal(original.Escalas[0].Versoes[0].PublicadaEm, versao.PublicadaEm);
 
         var ana = Assert.Single(lido.Funcionarios);
         var esperado = original.Funcionarios[0];
@@ -81,6 +96,15 @@ public class RepositorioDadosTests
 
         Assert.Contains("\"SeisPorUm\"", json);
         Assert.Contains("\"FimDeSemana\"", json);
+    }
+
+    [Fact]
+    public void Valores_calculados_nao_vao_para_o_arquivo()
+    {
+        var json = RepositorioDados.ParaBackup(Exemplo());
+
+        Assert.DoesNotContain("HorasComputadas", json);
+        Assert.DoesNotContain("\"Estado\"", json);
     }
 
     [Fact]

@@ -2,7 +2,6 @@
 @using System.Diagnostics
 @using Folguinha.Application
 @using Folguinha.Domain
-@using Folguinha.Domain.Geracao
 @using Folguinha.Domain.Regras
 @using Folguinha.Infrastructure.Planilhas
 @using Folguinha.Web.Servicos
@@ -27,7 +26,7 @@
         <button @onclick="CriarExemplo">Criar loja de exemplo</button>
         <button @onclick="Recarregar">Ler de novo</button>
         <button @onclick="GerarEscala" disabled="@(_dados.Funcionarios.Count == 0)">Gerar outubro/2026</button>
-        <button @onclick="BaixarPlanilha" disabled="@(_dados.Alocacoes.Count == 0)">Planilha de teste</button>
+        <button @onclick="BaixarPlanilha" disabled="@(Alocacoes.Count == 0)">Planilha de teste</button>
         <button @onclick="ExportarBackup" disabled="@(_dados.Empresa is null)">Exportar backup</button>
         <label class="botao">Importar backup <InputFile OnChange="ImportarBackup" accept=".json,application/json" /></label>
         <button @onclick="Apagar">Apagar tudo</button>
@@ -65,7 +64,9 @@
 
     static string Resumo(DadosDaUnidade d) => d.Empresa is null
         ? "nenhum"
-        : $"{d.Empresa.Nome}: {d.Funcionarios.Count} pessoas, {d.Turnos.Count} turnos, {d.Alocacoes.Count} alocações";
+        : $"{d.Empresa.Nome}: {d.Funcionarios.Count} pessoas, {d.Turnos.Count} turnos, {d.Escalas.Sum(e => e.Atual.Count)} alocações";
+
+    IReadOnlyList<Alocacao> Alocacoes => _dados.Escalas.FirstOrDefault()?.Atual ?? [];
 
     void Log(string texto) => _registro.Insert(0, $"{DateTime.Now:HH:mm:ss} {texto}");
 
@@ -85,23 +86,11 @@
     async Task GerarEscala()
     {
         var relogio = Stopwatch.StartNew();
-        var r = GeradorEscala.Gerar(new EntradaGeracao
-        {
-            Empresa = _dados.Empresa!,
-            Inicio = new(2026, 10, 1),
-            Fim = new(2026, 10, 31),
-            Funcionarios = _dados.Funcionarios,
-            Turnos = _dados.Turnos,
-            Funcoes = _dados.Funcoes,
-            Demandas = _dados.Demandas,
-            Feriados = _dados.Feriados,
-            Ocorrencias = _dados.Ocorrencias,
-            Funcionamento = _dados.Funcionamento,
-        });
-        await Repositorio.Salvar(_dados with { Alocacoes = r.Alocacoes });
+        var r = Escalas.Gerar(_dados with { Escalas = [] }, new(2026, 10, 1), new(2026, 10, 31));
+        await Repositorio.Salvar(r.Dados);
         await Recarregar();
         var porSeveridade = string.Join(", ", r.Violacoes.GroupBy(v => v.Severidade).Select(g => $"{g.Key}: {g.Count()}"));
-        Log($"Escala gerada em {relogio.ElapsedMilliseconds} ms; {r.Alocacoes.Count} alocações; avisos: {(porSeveridade == "" ? "nenhum" : porSeveridade)}.");
+        Log($"Escala gerada em {relogio.ElapsedMilliseconds} ms; {r.Escala.Atual.Count} alocações; avisos: {(porSeveridade == "" ? "nenhum" : porSeveridade)}.");
     }
 
     byte[] Planilha()
@@ -113,7 +102,7 @@
             [
                 [new("Data", EstiloCelula.Cabecalho), new("Situação", EstiloCelula.Cabecalho), new("Entrada", EstiloCelula.Cabecalho),
                  new("Saída", EstiloCelula.Cabecalho), new("Horas", EstiloCelula.Cabecalho)],
-                .. _dados.Alocacoes.Where(a => a.FuncionarioId == f.Id).OrderBy(a => a.Data).Select(a => (IReadOnlyList<Celula>)(a.Trabalha
+                .. Alocacoes.Where(a => a.FuncionarioId == f.Id).OrderBy(a => a.Data).Select(a => (IReadOnlyList<Celula>)(a.Trabalha
                     ? [new(Texto.Dia(a.Data)), new(turnos.GetValueOrDefault(a.TurnoId ?? default)?.Nome ?? "Trabalho", EstiloCelula.Manha),
                        new(Texto.Hora(a.Inicio)), new(Texto.Hora(a.Fim)), new(Math.Round(a.HorasComputadas.TotalHours, 2))]
                     : [new(Texto.Dia(a.Data)), new(a.Tipo == TipoAlocacao.Folga ? "Folga" : "Ausência", EstiloCelula.Folga)])),
@@ -167,14 +156,14 @@
         {
             await CriarExemplo();
             await GerarEscala();
-            var gravado = _dados.Alocacoes.Count;
+            var gravado = Alocacoes.Count;
             var backup = RepositorioDados.ParaBackup(_dados);
             await Apagar();
             await Repositorio.Salvar(RepositorioDados.DeBackup(backup)!);
             await Recarregar();
             var planilha = Planilha();
-            var ok = gravado == 31 * 8 && _dados.Alocacoes.Count == gravado && planilha.Length > 1000;
-            Log(ok ? $"AUTOTESTE OK (planilha {planilha.Length} bytes)" : $"AUTOTESTE FALHOU ({gravado}/{_dados.Alocacoes.Count}/{planilha.Length})");
+            var ok = gravado == 31 * 8 && Alocacoes.Count == gravado && planilha.Length > 1000;
+            Log(ok ? $"AUTOTESTE OK (planilha {planilha.Length} bytes)" : $"AUTOTESTE FALHOU ({gravado}/{Alocacoes.Count}/{planilha.Length})");
         }
         catch (Exception ex)
         {

@@ -45,5 +45,20 @@
   - Verify: `dotnet test Folguinha.slnx` → 84 testes
 - [ ] Aprovação, nova versão e histórico (Fase 6, com a persistência)
 
-## Fase 6–10
-Ver tasks/plan.md — detalhar ao chegar.
+## Fase 6 — Application + Infrastructure
+- [x] `Escala` com versões imutáveis, rascunho e estados (§14); `Escalas.Gerar/Ajustar/Publicar/DescartarRascunho/Encerrar/Diferencas`
+- [x] Publicação exige zero bloqueios e justificativa para alertas Crítico/Atenção; versão guarda autor, motivo, afetados, regras verificadas e avisos (§12.3)
+- [x] `Ocorrencias`: afetados → substitutos → simular → aprovar (nova versão; motivo sem revelar o tipo de afastamento)
+- [x] `ConfiguracaoDeRegras`: nível por regra com vigência e versão; regras CLT só ficam iguais ou mais rígidas
+- [x] `Feriados` + `BrasilApiFeriados` (Carnaval = ponto facultativo desligado); mescla preserva edições; sem rede → aviso
+- [x] Situação inicial entra também na validação (`SituacaoInicialExtensoes.HistoricoPresumido`)
+  - Verify: `dotnet test Folguinha.slnx` → 127 testes
+
+## Fase 7 — Exportação
+- [ ] Planilha individual (§12.1), consolidada (§12.2) e relatório de validação (§12.3)
+
+## Fase 8 — Telas
+- [ ] Ver SPEC.md "Telas"
+
+## Fase 9 — Publicação
+- [ ] Publish Release + verificação offline + workflow de deploy

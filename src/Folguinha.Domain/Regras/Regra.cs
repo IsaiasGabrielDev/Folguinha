@@ -62,9 +62,19 @@ public sealed record ContextoValidacao(
 
 public abstract class Regra
 {
-    protected Regra(DefinicaoRegra padrao) => Definicao = padrao;
+    DefinicaoRegra _definicao;
 
-    public DefinicaoRegra Definicao { get; init; }
+    protected Regra(DefinicaoRegra padrao) => _definicao = padrao;
+
+    public DefinicaoRegra Definicao { get => _definicao; init => _definicao = value; }
+
+    /// Cópia da regra com outra definição (nível/versão/vigência configurados pelo usuário).
+    public Regra ComDefinicao(DefinicaoRegra definicao)
+    {
+        var copia = (Regra)MemberwiseClone();
+        copia._definicao = definicao;
+        return copia;
+    }
 
     public abstract IEnumerable<Violacao> Validar(ContextoValidacao ctx);
 
