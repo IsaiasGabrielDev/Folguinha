@@ -41,6 +41,22 @@ public static class Feriados
         }
     }
 
+    /// Traz os feriados estaduais da UF para os anos indicados. Não sobrescreve nada: data já
+    /// ocupada (feriado nacional ou cadastro do gerente) é pulada, então dá para chamar de novo
+    /// sem duplicar. Entram como manuais, para o gerente poder editar e apagar.
+    public static DadosDaUnidade AplicarEstaduais(DadosDaUnidade dados, string? uf, IEnumerable<int> anos)
+    {
+        var ocupadas = dados.Feriados.Select(f => f.Data).ToHashSet();
+        var novos = FeriadosEstaduais.De(uf)
+            .SelectMany(e => anos.Distinct().Order().Select(ano => new Feriado(
+                new DateOnly(ano, e.Mes, e.Dia), e.Nome, AbrangenciaFeriado.Estadual,
+                Considerado: e.Consenso, Origem: OrigemFeriado.Manual)))
+            .Where(f => ocupadas.Add(f.Data))
+            .ToList();
+        return novos.Count == 0 ? dados
+            : dados with { Uf = uf, Feriados = [.. dados.Feriados.Concat(novos).OrderBy(f => f.Data)] };
+    }
+
     /// Adiciona (original nulo) ou substitui um feriado.
     public static DadosDaUnidade Salvar(DadosDaUnidade dados, Feriado? original, Feriado novo)
     {

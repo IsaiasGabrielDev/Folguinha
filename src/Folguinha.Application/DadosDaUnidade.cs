@@ -16,6 +16,8 @@ public sealed record DadosDaUnidade
     public bool AceitouAviso { get; init; }
     public Empresa? Empresa { get; init; }
     public string NomeUnidade { get; init; } = "";
+    /// Sigla do estado, para sugerir os feriados estaduais.
+    public string? Uf { get; init; }
     public IReadOnlyList<Funcionario> Funcionarios { get; init; } = [];
     public IReadOnlyList<Turno> Turnos { get; init; } = [];
     public IReadOnlyList<Funcao> Funcoes { get; init; } = [];

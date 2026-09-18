@@ -20,6 +20,37 @@
             : "Toque em “Atualizar nacionais” para buscar os feriados do ano (precisa de internet).")
     </p>
 
+    <div class="cartao">
+        <h2>Feriados do seu estado</h2>
+        <p class="ajuda">A BrasilAPI traz só os nacionais. Escolha o estado para o app sugerir os estaduais.</p>
+        <label class="campo">Estado
+            <select @bind="_uf">
+                <option value="">Escolha…</option>
+                @foreach (var (sigla, nome) in FeriadosEstaduais.Estados)
+                {
+                    <option value="@sigla">@nome (@sigla)</option>
+                }
+            </select>
+        </label>
+        @if (FeriadosEstaduais.De(_uf) is { Count: > 0 } lista)
+        {
+            <p class="ajuda pequeno">
+                @lista.Count(x => x.Consenso) confirmado(s) e @lista.Count(x => !x.Consenso) em dúvida.
+                Os duvidosos entram desligados: as fontes públicas divergem e vários são ponto
+                facultativo, não feriado. Confirme com o DP antes de publicar a escala.
+            </p>
+            <button type="button" class="botao" @onclick="AplicarEstaduais">
+                <Icone Nome="mais-um" Tamanho="18" /> Adicionar feriados de @_uf
+            </button>
+        }
+        else if (_uf is { Length: 2 })
+        {
+            <p class="nota">@FeriadosEstaduais.NomeDoEstado(_uf) não tem feriado estadual — só os nacionais valem.</p>
+        }
+        <p class="ajuda pequeno">Feriado da cidade (aniversário, padroeiro) não tem lista pública confiável:
+            cadastre em “Adicionar feriado”, escolhendo o tipo Municipal.</p>
+    </div>
+
     <div class="cartao destaque">
         <label class="linha fixa" style="gap: .75rem; cursor: pointer;">
             <span class="cresce">
@@ -99,6 +130,24 @@
     [Parameter] public string TextoBotao { get; set; } = "Continuar";
     [Parameter] public EventCallback AoSalvar { get; set; }
 
+    string? _uf;
+
+    /// Anos que o gerente já mexeu, ou os dois que a tela oferece.
+    IEnumerable<int> Anos => Dados.AnosDeFeriadosCarregados is { Count: > 0 } a
+        ? a
+        : [Loja.Hoje.Year, Loja.Hoje.Year + 1];
+
+    async Task AplicarEstaduais()
+    {
+        var antes = Dados.Feriados.Count;
+        var ok = await Loja.Alterar(d => Feriados.AplicarEstaduais(d, _uf, Anos), null);
+        if (!ok) return;
+        var novos = Dados.Feriados.Count - antes;
+        Loja.Avisar(novos == 0
+            ? $"Os feriados de {_uf} já estavam na lista."
+            : $"{novos} feriado(s) de {_uf} adicionados. Confira os que entraram desligados.");
+    }
+
     sealed class Edicao
     {
         public string Nome { get; set; } = "";
@@ -116,6 +165,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _uf = Dados.Uf;
         if (!Dados.AnosDeFeriadosCarregados.Contains(_ano)) await Buscar();
     }
 
