@@ -8,6 +8,29 @@ Gerenciador de escalas e folgas conforme a CLT, para o gerente montar, validar, 
 
 > O Folguinha auxilia na validação da escala, mas não substitui o Departamento Pessoal, o contador ou a assessoria jurídica.
 
+**Acesse:** https://isaiasgabrieldev.github.io/Folguinha/
+
+## Como funciona
+
+### Para o gerente
+
+1. **Primeiro acesso:** um passo a passo cadastra a loja (horário de funcionamento, UF para os feriados), os turnos e a equipe. Dá para pular e explorar com uma **loja de exemplo**.
+2. **Equipe:** para cada pessoa, função, regime (6x1, 5x2, 12x36, meio período), carga horária, disponibilidade e a **situação inicial** (última folga, último domingo de folga, se trabalhou no último feriado). É dela que o gerador continua a sequência.
+3. **Gerar a escala:** escolha semana, quinzena ou mês. O gerador distribui turnos e folgas respeitando a CLT, a demanda mínima de cada turno e função, o rodízio de domingos e feriados e as folgas extras configuradas.
+4. **Revisar:** a grade mostra alertas (Bloqueio, Crítico, Atenção, Informativo), cada um com a explicação e uma sugestão de correção. Ajustes manuais são revalidados na hora.
+5. **Publicar:** a escala passa por Rascunho → Validada → Publicada. Uma escala publicada nunca é sobrescrita: cada mudança vira uma nova versão com motivo, autor e quem foi afetado (**Mais → Histórico**).
+6. **Ocorrências:** atestado, falta, licença ou folga extra. O app mostra os turnos afetados, sugere substitutos em ordem de adequação e simula o impacto antes de aprovar.
+7. **Exportar:** planilhas `.xlsx` individual, consolidada (calendário) e o relatório de validação. No celular, o arquivo sai pelo menu de compartilhar; no computador, é baixado.
+
+O **Painel** resume o período: turnos sem cobertura, falta ou excesso de horas, horas extras previstas, descanso irregular e distribuição de domingos e feriados.
+
+### Por dentro
+
+- **Regras** (`Folguinha.Domain/Regras`): cada regra valida a escala e devolve violações com pessoa, dia e sugestão. Cada uma tem nível (**Obrigatória**, **Alerta** ou **Preferência**), fundamento legal e vigência, e é versionada: mudar uma regra não altera escalas já encerradas. Padrões: jornada diária e semanal, intervalo intrajornada, 11h entre jornadas, repouso semanal, domingos e feriados.
+- **Gerador** (`Folguinha.Domain/Geracao`): heurística determinística. Primeiro marca as folgas de cada semana (nunca mais de 6 dias seguidos, rodízio de domingos, folgas extras), depois preenche os turnos de cada dia pela demanda, só com alocações que não quebram regra obrigatória. Ajustes manuais e dias já publicados ficam travados.
+- **Remanejamento** (`Folguinha.Domain/Remanejo`): ranqueia substitutos para uma ocorrência sem quebrar as regras obrigatórias.
+- **Dados:** no beta, tudo fica no IndexedDB do navegador. A camada de aplicação usa interfaces de serviço, então na fase online as telas passam a falar com uma API sem mudar.
+
 ## Estrutura
 
 ```
@@ -44,9 +67,8 @@ As fotos das telas vão para `artefatos/` (ou para a pasta em `FOTOS`). A págin
 
 O workflow [.github/workflows/publicar.yml](.github/workflows/publicar.yml) testa e publica a cada push na `main`.
 
-1. Crie um repositório no GitHub e envie este projeto (`git remote add origin …` e `git push -u origin main`).
-2. No repositório, abra **Settings → Pages** e, em **Source**, escolha **GitHub Actions**.
-3. Depois do primeiro push, o site fica em `https://<usuário>.github.io/<repositório>/`.
+1. No repositório, abra **Settings → Pages** e, em **Source**, escolha **GitHub Actions**.
+2. A cada push na `main`, o site é atualizado em https://isaiasgabrieldev.github.io/Folguinha/.
 
 A base do app se ajusta sozinha à subpasta do Pages, e o `404.html` permite abrir links diretos. Outras hospedagens estáticas com HTTPS (Cloudflare Pages, Azure Static Web Apps) também servem: basta publicar a pasta `publicado/wwwroot`.
 
