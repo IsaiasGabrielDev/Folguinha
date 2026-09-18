@@ -12,6 +12,18 @@
         </div>
     }
 
+    @if (FolgasExtras.NaMesmaSemana(Dados) is { Count: > 1 } juntos)
+    {
+        <div class="nota alerta">
+            <Icone Nome="alerta" Tamanho="18" />
+            <span class="cresce">
+                @juntos.Count pessoas têm a folga extra na mesma semana, então folgam sempre juntas
+                e a loja fica vazia nesse fim de semana.
+            </span>
+            <button type="button" class="botao pequeno" @onclick="RevezarFolgasExtras">Revezar</button>
+        </div>
+    }
+
     <fieldset>
         <legend>Período</legend>
         <div class="segmentado" role="group" aria-label="Tipo de período">
@@ -159,6 +171,14 @@
         Existente is { Encerrada: false } x && (x.Inicio != _inicio || x.Fim != Fim)
             ? new($"O período se sobrepõe à escala de {Formatos.Periodo(x)}.", "Abrir", "escala") : null,
     }.OfType<Pendencia>().ToList();
+
+    /// Conserta o cadastro antigo: espalha a folga extra da equipe pelas semanas do ciclo.
+    async Task RevezarFolgasExtras()
+    {
+        if (FolgasExtras.NaMesmaSemana(Dados).FirstOrDefault()?.FolgaExtra is not { } modelo) return;
+        await Loja.Alterar(d => FolgasExtras.Revezar(d, modelo),
+            $"Folga extra revezada em {modelo.ACadaSemanas} grupos. Gere o rascunho de novo.");
+    }
 
     async Task Gerar()
     {

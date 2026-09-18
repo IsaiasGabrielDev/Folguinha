@@ -110,6 +110,10 @@ descanso obrigatório, não da folga extra.
       junto de `JuntoDaFolgaNormal`. Pré-alocar antes do laço não funcionava — o domingo obrigatório
       já tinha consumido a folga e a conta `falta - 1` zerava
   - Verify: 8 pessoas, out/2026 — sábado cai de 16 folgas para 0 e o domingo obrigatório se mantém (15)
+- [x] Corrigir o botão não bastava: o cadastro já gravado continuava todo na mesma semana e o app
+      gerava fim de semana vazio sem dizer por quê (6 pessoas, 19–20/09, zero trabalhando).
+      `FolgasExtras.NaMesmaSemana` detecta e a folha de gerar oferece "Revezar" num toque; o
+      revezamento saiu da ficha para o Application, porque agora dois lugares usam
 - [ ] Com `DiaUtil` ninguém pega mais **sábado + domingo inteiro**: o app só força o domingo
       obrigatório, nunca o par. O fim de semana inteiro dela vem de uma regra que o app não tem —
       falta um "fim de semana inteiro a cada N semanas" como descanso obrigatório, separado da

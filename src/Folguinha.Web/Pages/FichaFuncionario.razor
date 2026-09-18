@@ -343,24 +343,7 @@
                 "Folga extra removida de toda a equipe.");
             return;
         }
-        await Loja.Alterar(d =>
-        {
-            // quem está nesta ficha fica na semana escolhida; o resto se espalha pelas seguintes,
-            // intercalado por turno para nenhum turno ficar todo na mesma semana
-            var fase = d.Funcionarios
-                .OrderBy(x => x.Id == _id ? 0 : 1)
-                .ThenBy(x => x.TurnoPrincipal)
-                .ThenBy(x => x.Nome, StringComparer.Ordinal)
-                .Select((x, i) => (x.Id, Semana: i % modelo.ACadaSemanas))
-                .ToDictionary(t => t.Id, t => t.Semana);
-            return d with
-            {
-                Funcionarios = [.. d.Funcionarios.Select(x => x with
-                {
-                    FolgaExtra = modelo with { APartirDe = modelo.APartirDe.AddDays(7 * fase[x.Id]) },
-                })],
-            };
-        }, modelo.ACadaSemanas > 1
+        await Loja.Alterar(d => FolgasExtras.Revezar(d, modelo, _id), modelo.ACadaSemanas > 1
             ? $"Folga extra aplicada, revezando a equipe em {modelo.ACadaSemanas} grupos."
             : "Folga extra aplicada a toda a equipe.");
     }

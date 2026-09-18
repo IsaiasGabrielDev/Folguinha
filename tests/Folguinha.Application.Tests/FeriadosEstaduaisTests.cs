@@ -43,7 +43,7 @@ public class FeriadosEstaduaisTests
 
         var d = Feriados.AplicarEstaduais(comTiradentes, "DF", [2026]);
 
-        var em21 = Assert.Single(d.Feriados.Where(f => f.Data == new DateOnly(2026, 4, 21)));
+        var em21 = Assert.Single(d.Feriados, f => f.Data == new DateOnly(2026, 4, 21));
         Assert.Equal("Tiradentes", em21.Nome);
         Assert.Contains(d.Feriados, f => f.Data == new DateOnly(2026, 11, 30)); // o outro entrou
     }
