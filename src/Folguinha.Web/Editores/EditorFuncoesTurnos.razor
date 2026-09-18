@@ -55,6 +55,15 @@
     {
         <p class="ajuda pequeno">Cadastre ao menos um turno.</p>
     }
+
+    @* o turno novo só existe depois de salvar, e o botão de baixo fica fora da tela no celular *@
+    @if (Alterado && _turnos.Count > 0)
+    {
+        <div class="espaco-flutuante" aria-hidden="true"></div>
+        <button type="button" class="botao primario flutuante" @onclick="Salvar">
+            <Icone Nome="ok" Tamanho="20" Traco="2" /> @TextoBotao
+        </button>
+    }
 </div>
 
 @code {
@@ -66,6 +75,8 @@
     string _novaFuncao = "";
 
     DadosDaUnidade DadosTemporarios => Dados with { Turnos = _turnos };
+
+    bool Alterado => !_turnos.SequenceEqual(Dados.Turnos) || !_funcoes.SequenceEqual(Dados.Funcoes);
 
     protected override void OnInitialized()
     {
@@ -120,7 +131,7 @@
             Turnos = turnos,
             Funcoes = [.. _funcoes],
             // tira referências a turnos/funções removidos
-            Demandas = [.. d.Demandas.Where(x => idsTurnos.Contains(x.TurnoId) && (x.FuncaoId is null || idsFuncoes.Contains(x.FuncaoId.Value)))],
+            Demandas = [.. d.Demandas.Where(x => (x.TurnoId is null || idsTurnos.Contains(x.TurnoId.Value)) && (x.FuncaoId is null || idsFuncoes.Contains(x.FuncaoId.Value)))],
             Funcionarios = [.. d.Funcionarios.Select(f => f with
             {
                 Funcoes = f.Funcoes?.Where(idsFuncoes.Contains).ToList() is { Count: > 0 } fs ? fs : null,

@@ -46,7 +46,7 @@
             ("loja", "Empresa", Dados.Empresa?.Nome ?? "", "configuracoes/empresa"),
             ("relogio", "Horário de funcionamento", $"{Dados.Funcionamento.Select(p => p.Dia).Distinct().Count()} dias por semana", "configuracoes/funcionamento"),
             ("escala", "Turnos e funções", $"{Dados.Turnos.Count} turnos · {Dados.Funcoes.Count} funções", "configuracoes/turnos"),
-            ("equipe", "Pessoas por turno", "Mínimo e ideal por dia", "configuracoes/demanda"),
+            ("equipe", "Quantas pessoas", "Horários de mais fluxo e mínimo por turno", "configuracoes/demanda"),
         ]),
         ("Aparelho",
         [

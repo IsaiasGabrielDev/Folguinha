@@ -3,7 +3,7 @@
 
 <PageTitle>@Titulo · Folguinha</PageTitle>
 
-<Cabecalho Titulo="@Titulo" Voltar="mais" />
+<Cabecalho Titulo="@Titulo" Voltar="@Volta" />
 
 @switch (Secao)
 {
@@ -29,13 +29,17 @@
 
 @code {
     [Parameter] public string Secao { get; set; } = "";
+    [SupplyParameterFromQuery(Name = "volta")] public string? VoltaPara { get; set; }
+
+    /// Quem chegou por um atalho volta para onde estava, não para "Mais".
+    string Volta => VoltaPara is { Length: > 0 } v && !v.Contains("//", StringComparison.Ordinal) ? v : "mais";
 
     string Titulo => Secao switch
     {
         "empresa" => "Empresa",
         "funcionamento" => "Horário de funcionamento",
         "turnos" => "Turnos e funções",
-        "demanda" => "Pessoas por turno",
+        "demanda" => "Quantas pessoas",
         "feriados" => "Feriados",
         _ => "Configurações",
     };

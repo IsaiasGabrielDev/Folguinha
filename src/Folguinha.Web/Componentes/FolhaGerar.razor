@@ -2,6 +2,16 @@
 @* Nova escala: período + última folga de quem ainda não tem histórico. *@
 
 <Folha Aberta="Aberta" Titulo="Gerar escala" AoFechar="AoFechar">
+    @* o que impede de gerar vem antes de tudo: no celular o rodapé da folha fica fora da tela *@
+    @foreach (var p in Pendencias)
+    {
+        <div class="nota alerta">
+            <Icone Nome="alerta" Tamanho="18" />
+            <span class="cresce">@p.Texto</span>
+            <a class="botao pequeno" href="@p.Link">@p.Acao</a>
+        </div>
+    }
+
     <fieldset>
         <legend>Período</legend>
         <div class="segmentado" role="group" aria-label="Tipo de período">
@@ -20,7 +30,11 @@
         <p class="nota alerta">
             <Icone Nome="info" Tamanho="18" />
             <span>
-                @if (e.Inicio == _inicio && e.Fim == Fim)
+                @if (e.Encerrada)
+                {
+                    @($"A escala de {Formatos.Periodo(e)} está encerrada.")
+                }
+                else if (e.Inicio == _inicio && e.Fim == Fim)
                 {
                     @($"Essa escala já existe. Gerar de novo refaz o rascunho mantendo os ajustes manuais.")
                 }
@@ -48,16 +62,6 @@
                 </label>
             }
         </div>
-    }
-
-    @if (Pendencias.Count > 0)
-    {
-        <ul class="nota alerta" style="flex-direction: column; margin: 0; padding-left: 1.5rem;">
-            @foreach (var p in Pendencias)
-            {
-                <li>@p</li>
-            }
-        </ul>
     }
 
     <button type="button" class="botao primario" disabled="@(_gerando || Bloqueado)" @onclick="Gerar">
@@ -130,17 +134,31 @@
 
     Escala? Existente => Dados.Escalas.FirstOrDefault(e => e.Inicio <= Fim && e.Fim >= _inicio);
 
-    bool Bloqueado => Existente is { } e && (e.Inicio != _inicio || e.Fim != Fim || e.Encerrada) || Pendencias.Count > 0;
+    /// O botão só desabilita por um motivo que está escrito na tela, com o atalho para resolver.
+    bool Bloqueado => Pendencias.Count > 0;
 
     List<Funcionario> SemHistorico =>
         [.. Dados.Funcionarios.Where(f => !Dados.Escalas.Any(e => e.Inicio < _inicio && e.Atual.Any(a => a.FuncionarioId == f.Id))).OrderBy(f => f.Nome)];
 
-    List<string> Pendencias => new[]
+    sealed record Pendencia(string Texto, string Acao, string Link);
+
+    const string Volta = "?volta=escala";
+
+    List<Pendencia> Pendencias => new Pendencia?[]
     {
-        Dados.Funcionarios.Count == 0 ? "Cadastre a equipe (Equipe → Adicionar)." : null,
-        Dados.Turnos.Count == 0 ? "Cadastre os turnos (Mais → Turnos e funções)." : null,
-        Dados.Demandas.Count == 0 ? "Defina quantas pessoas por turno (Mais → Pessoas por turno)." : null,
-    }.OfType<string>().ToList();
+        Dados.Funcionarios.Count == 0
+            ? new("Ninguém na equipe ainda.", "Cadastrar", "equipe/novo?volta=escala") : null,
+        Dados.Turnos.Count == 0
+            ? new("Nenhum turno cadastrado.", "Cadastrar", $"configuracoes/turnos{Volta}") : null,
+        Dados.Demandas.Count == 0
+            ? new("Falta dizer quantas pessoas a loja precisa ao mesmo tempo.", "Definir", $"configuracoes/demanda{Volta}") : null,
+        Dados.Funcionamento.Count == 0
+            ? new("Falta o horário de funcionamento.", "Definir", $"configuracoes/funcionamento{Volta}") : null,
+        Existente is { Encerrada: true }
+            ? new("A escala desse período está encerrada e não aceita mais mudanças.", "Ver histórico", "historico") : null,
+        Existente is { Encerrada: false } x && (x.Inicio != _inicio || x.Fim != Fim)
+            ? new($"O período se sobrepõe à escala de {Formatos.Periodo(x)}.", "Abrir", "escala") : null,
+    }.OfType<Pendencia>().ToList();
 
     async Task Gerar()
     {

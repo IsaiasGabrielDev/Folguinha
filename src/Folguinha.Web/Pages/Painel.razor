@@ -142,8 +142,7 @@ else
     (int Escalados, int Minimo) Cobertura(DateOnly dia)
     {
         if (_escala is null || !_escala.Cobre(dia)) return (0, 0);
-        var minimo = Demanda.Aplicaveis(Dados.Demandas, dia).GroupBy(d => d.TurnoId)
-            .Sum(g => Math.Max(g.Where(d => d.FuncaoId is null).Sum(d => d.Minimo), g.Where(d => d.FuncaoId is not null).Sum(d => d.Minimo)));
+        var minimo = Demanda.PessoasNoDia(Dados.Demandas, dia, Dados.Turnos);
         if (Escalas.DiasFechados(Dados, dia, dia).Count > 0) minimo = 0;
         return (_escala.Atual.Count(a => a.Data == dia && a.Trabalha), minimo);
     }

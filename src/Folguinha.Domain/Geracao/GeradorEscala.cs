@@ -133,6 +133,11 @@ sealed class Execucao
                 if (posicaoExtra == PosicaoFolgaExtra.JuntoDaFolgaNormal
                     && candidatos.Where(d => minhas.Contains(d.AddDays(-1)) || minhas.Contains(d.AddDays(1))).ToList() is { Count: > 0 } colados)
                     candidatos = colados;
+                // folga extra só de segunda a sexta: o fim de semana fica reservado ao descanso
+                // obrigatório, que já foi marcado acima — aqui só entra dia útil, se houver
+                if (posicaoExtra == PosicaoFolgaExtra.DiaUtil
+                    && candidatos.Where(d => d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)).ToList() is { Count: > 0 } uteis)
+                    candidatos = uteis;
                 var escolhido = candidatos
                     .OrderByDescending(d => Pontuar(f, d, feriado))
                     .ThenBy(d => (d.DayNumber + posicao) % 7)
@@ -170,6 +175,13 @@ sealed class Execucao
             {
                 var colegas = pessoas.Count(p => p.TemFuncao(fn) && !folgas.Contains((p.Id, d)) && !fixas[p.Id].Contains(d));
                 if (colegas - 1 < PessoasNecessarias(d, fn)) pontos -= 50;
+            }
+            // mesma proteção, agora por turno: a sobra do dia não enxerga que as pessoas necessárias
+            // têm de estar em turnos específicos, e esvaziaria o turno que cobre a abertura ou o fechamento
+            if (f.TurnoPrincipal is { } tp)
+            {
+                var colegas = pessoas.Count(p => p.TurnoPrincipal == tp && !folgas.Contains((p.Id, d)) && !fixas[p.Id].Contains(d));
+                if (colegas - 1 < PessoasNoTurno(d, tp)) pontos -= 50;
             }
             if (e.RodizioFeriados && feriado?.Data == d && TrabalhouUltimoFeriado(f, d) && sobra > 0) pontos += 100;
             // semana seguinte tem folga extra no sábado+domingo: folgar no fim desta evita 7 dias seguidos
@@ -252,7 +264,7 @@ sealed class Execucao
         }
 
         var vagas = Aberto(dia)
-            ? Demanda.Aplicaveis(e.Demandas, dia).OrderBy(d => d.FuncaoId is null).ThenBy(d => TurnoIndex(d.TurnoId)).ToList()
+            ? Demanda.Aplicaveis(e.Demandas, dia).OrderBy(d => d.EhFaixa).ThenBy(d => d.FuncaoId is null).ThenBy(d => TurnoIndex(d.TurnoId)).ToList()
             : [];
         foreach (var alvo in new Func<Demanda, int>[] { d => d.Minimo, d => d.Ideal })
         foreach (var vaga in vagas)
@@ -262,7 +274,8 @@ sealed class Execucao
         {
             var turnos = e.Turnos.Where(t => f.PodeTurno(t.Id))
                 .OrderByDescending(t => t.Id == f.TurnoPrincipal)
-                .ThenByDescending(t => vagas.Where(v => v.TurnoId == t.Id && v.FuncaoId is null).Sum(v => v.Ideal) - Contar(t.Id, null, hoje))
+                .ThenByDescending(t => FaltaNoTurno(t, vagas, hoje))
+                .ThenBy(t => ContarNoTurno(t.Id, hoje)) // sobrou gente e a demanda esta atendida: equilibra os turnos
                 .ThenBy(t => TurnoIndex(t.Id));
             var aloc = turnos.Select(t => Tentar(f, dia, t, null)).FirstOrDefault(a => a is not null);
             if (aloc is not null) Atribuir(f, aloc, hoje, trabalhadores);
@@ -292,24 +305,30 @@ sealed class Execucao
 
     void Preencher(DateOnly dia, Demanda vaga, int alvo, Dictionary<Guid, Alocacao> hoje, List<Funcionario> trabalhadores)
     {
-        var turno = e.Turnos.FirstOrDefault(t => t.Id == vaga.TurnoId);
-        if (turno is null) return;
-
-        while (Contar(vaga.TurnoId, vaga.FuncaoId, hoje) < alvo)
+        while (Contar(vaga, hoje) < alvo)
         {
-            var escolhido = trabalhadores
-                .Select(f => (f, aloc: Tentar(f, dia, turno, vaga.FuncaoId)))
+            var escolhido = TurnosQueServem(vaga, hoje)
+                .SelectMany(t => trabalhadores.Select(f => (f, t, aloc: Tentar(f, dia, t, vaga.FuncaoId))))
                 .Where(x => x.aloc is not null)
-                .OrderBy(x => Preferido(x.f, dia, turno) ? 0 : 1)
+                .OrderBy(x => Preferido(x.f, dia, x.t) ? 0 : 1)
                 .ThenBy(x => vaga.FuncaoId is null && x.f.Funcoes is { Count: > 0 } ? 1 : 0) // guarda especialistas
-                .ThenBy(x => x.f.TurnoPrincipal is null || x.f.TurnoPrincipal == turno.Id ? 0 : 1)
-                .ThenBy(x => TurnoDeOntem(x.f, dia) is { } ontem && ontem != turno.Id ? 1 : 0)
+                .ThenBy(x => x.f.TurnoPrincipal is null || x.f.TurnoPrincipal == x.t.Id ? 0 : 1)
+                .ThenBy(x => TurnoDeOntem(x.f, dia) is { } ontem && ontem != x.t.Id ? 1 : 0)
                 .ThenBy(x => HorasNoPeriodo(x.f))
                 .ThenBy(x => x.f.Nome, StringComparer.Ordinal).ThenBy(x => x.f.Id)
                 .FirstOrDefault();
             if (escolhido.aloc is null) return;
             Atribuir(escolhido.f, escolhido.aloc, hoje, trabalhadores);
         }
+    }
+
+    /// Turnos capazes de preencher a vaga: o dela, ou — numa faixa — os que cobrem o instante
+    /// mais vazio, que é onde a faixa está furada agora.
+    IEnumerable<Turno> TurnosQueServem(Demanda vaga, Dictionary<Guid, Alocacao> hoje)
+    {
+        if (!vaga.EhFaixa) return e.Turnos.Where(t => t.Id == vaga.TurnoId);
+        var instante = vaga.MomentoMaisVazio(hoje.Values).Instante;
+        return e.Turnos.Where(t => Demanda.Cobre(t.Inicio, t.Fim, instante)).OrderBy(t => TurnoIndex(t.Id));
     }
 
     void Atribuir(Funcionario f, Alocacao a, Dictionary<Guid, Alocacao> hoje, List<Funcionario> trabalhadores)
@@ -352,17 +371,40 @@ sealed class Execucao
     bool Preferido(Funcionario f, DateOnly dia, Turno t) =>
         (f.Disponibilidades ?? []).Where(x => x.ValeEm(dia) && x.Tipo == TipoRestricao.Preferencia).All(x => x.Comporta(t));
 
-    int Contar(Guid turnoId, Guid? funcaoId, Dictionary<Guid, Alocacao> hoje) =>
-        hoje.Values.Count(a => a.Trabalha && a.TurnoId == turnoId && (funcaoId is null || a.FuncaoId == funcaoId));
+    /// Quanto ainda falta para o ideal que este turno consegue atender — conta as faixas
+    /// cujo instante mais vazio ele cobre, para quem sobra ir onde o movimento é maior.
+    int FaltaNoTurno(Turno t, List<Demanda> vagas, Dictionary<Guid, Alocacao> hoje) =>
+        vagas.Sum(v => v.EhFaixa
+            ? Demanda.Cobre(t.Inicio, t.Fim, v.MomentoMaisVazio(hoje.Values).Instante) ? Math.Max(0, v.Ideal - Contar(v, hoje)) : 0
+            : v.TurnoId == t.Id && v.FuncaoId is null ? v.Ideal - ContarNoTurno(t.Id, hoje) : 0);
+
+    int ContarNoTurno(Guid turnoId, Dictionary<Guid, Alocacao> hoje) =>
+        hoje.Values.Count(a => a.Trabalha && a.TurnoId == turnoId);
+
+    int Contar(Demanda vaga, Dictionary<Guid, Alocacao> hoje) =>
+        vaga.EhFaixa
+            ? vaga.MomentoMaisVazio(hoje.Values).Presentes
+            : hoje.Values.Count(a => a.Trabalha && a.TurnoId == vaga.TurnoId && (vaga.FuncaoId is null || a.FuncaoId == vaga.FuncaoId));
+
+    /// Quanto um turno tem de segurar sozinho no dia: a demanda dele, ou a maior faixa de horário
+    /// em que ele é o único turno presente em algum instante (abertura e fechamento, tipicamente).
+    int PessoasNoTurno(DateOnly dia, Guid turnoId)
+    {
+        if (!Aberto(dia)) return 0;
+        var doDia = Demanda.Aplicaveis(e.Demandas, dia).ToList();
+        var porTurno = doDia.Where(d => !d.EhFaixa && d.TurnoId == turnoId && d.FuncaoId is null).Sum(d => d.Minimo);
+        var porFaixa = doDia.Where(d => d.EhFaixa && d.TurnosSozinhos(e.Turnos).Any(t => t.Id == turnoId))
+            .Select(d => d.Minimo).DefaultIfEmpty(0).Max();
+        return Math.Max(porTurno, porFaixa);
+    }
 
     /// Pessoas necessárias no dia (ou numa função): por turno, o maior entre a demanda geral e a soma das funções.
     int PessoasNecessarias(DateOnly dia, Guid? funcaoId = null)
     {
         if (!Aberto(dia)) return 0;
-        var doDia = Demanda.Aplicaveis(e.Demandas, dia).ToList();
-        if (funcaoId is not null) return doDia.Where(d => d.FuncaoId == funcaoId).Sum(d => d.Minimo);
-        return doDia.GroupBy(d => d.TurnoId).Sum(g =>
-            Math.Max(g.Where(d => d.FuncaoId is null).Sum(d => d.Minimo), g.Where(d => d.FuncaoId is not null).Sum(d => d.Minimo)));
+        if (funcaoId is not null)
+            return Demanda.Aplicaveis(e.Demandas, dia).Where(d => d.FuncaoId == funcaoId).Sum(d => d.Minimo);
+        return Demanda.PessoasNoDia(e.Demandas, dia, e.Turnos);
     }
 
     // ---------- Consultas ----------
@@ -397,7 +439,7 @@ sealed class Execucao
         for (var d = e.Inicio; d <= e.Fim; d = d.AddDays(1)) yield return d;
     }
 
-    int TurnoIndex(Guid turnoId) => e.Turnos.ToList().FindIndex(t => t.Id == turnoId);
+    int TurnoIndex(Guid? turnoId) => e.Turnos.ToList().FindIndex(t => t.Id == turnoId);
 
     static DateOnly InicioDaSemana(DateOnly d) => d.AddDays(-(((int)d.DayOfWeek + 6) % 7));
 }

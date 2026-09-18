@@ -37,6 +37,17 @@ public static class Formatos
     };
 
     /// Segunda a domingo.
+    /// Rótulo curto de um conjunto de dias: "Todo dia", "Seg a Sex", "Sáb e dom" ou a lista.
+    public static string ListaDeDias(IReadOnlyCollection<DayOfWeek> dias)
+    {
+        var conjunto = dias.ToHashSet();
+        if (conjunto.Count == 7) return "Todo dia";
+        var uteis = Semana.Where(d => d is not (DayOfWeek.Saturday or DayOfWeek.Sunday)).ToHashSet();
+        if (conjunto.SetEquals(uteis)) return "Seg a Sex";
+        if (conjunto.SetEquals([DayOfWeek.Saturday, DayOfWeek.Sunday])) return "Sáb e dom";
+        return string.Join(", ", Semana.Where(conjunto.Contains).Select(DiaSemanaCurto));
+    }
+
     public static readonly DayOfWeek[] Semana =
         [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
 
@@ -75,6 +86,7 @@ public static class Formatos
     {
         PosicaoFolgaExtra.FimDeSemana => "Sábado e domingo",
         PosicaoFolgaExtra.JuntoDaFolgaNormal => "Colada na folga normal",
+        PosicaoFolgaExtra.DiaUtil => "Só de segunda a sexta",
         _ => "Qualquer dia",
     };
 

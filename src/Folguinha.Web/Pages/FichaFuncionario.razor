@@ -177,6 +177,11 @@
                 </label>
             </div>
             <button type="button" class="botao" @onclick="AplicarATodos">Aplicar esta folga extra a toda a equipe</button>
+            @if (Math.Clamp(_f.ExtraSemanas, 1, 8) is var grupos && grupos > 1)
+            {
+                <p class="ajuda pequeno">A equipe é dividida em @grupos grupos, cada um folgando numa semana
+                    diferente. Se todos folgassem na mesma semana, a loja ficaria vazia no fim de semana.</p>
+            }
         }
         <p class="ajuda pequeno">Folga extra numa data específica: registre em Ocorrências → “Folga extra”.</p>
     </section>
@@ -185,10 +190,23 @@
         @if (!_novo)
         {
             <button type="button" class="botao perigo" @onclick="() => _confirmarRemocao = true"><Icone Nome="lixo" Tamanho="18" /> Remover</button>
+            <button type="button" class="botao" @onclick="AbrirDuplicar"><Icone Nome="mais-um" Tamanho="18" /> Duplicar</button>
         }
         <button type="submit" class="botao primario" disabled="@string.IsNullOrWhiteSpace(_f.Nome)">Salvar</button>
     </div>
 </form>
+
+<Folha Aberta="_duplicando" Titulo="Duplicar pessoa" AoFechar="() => _duplicando = false">
+    <p class="ajuda">Copia tudo o que está nesta tela — regime, carga, turno, funções, disponibilidade,
+        situação inicial e folga extra. Só a matrícula fica em branco, porque é de cada pessoa.</p>
+    <label class="campo">Nome da nova pessoa
+        <input @bind="_nomeDaCopia" @bind:event="oninput" autocomplete="off" />
+    </label>
+    <div class="acoes">
+        <button type="button" class="botao" @onclick="() => _duplicando = false">Cancelar</button>
+        <button type="button" class="botao primario" disabled="@string.IsNullOrWhiteSpace(_nomeDaCopia)" @onclick="Duplicar">Duplicar</button>
+    </div>
+</Folha>
 
 <Folha Aberta="_confirmarRemocao" Titulo="Remover pessoa?" AoFechar="() => _confirmarRemocao = false">
     <p>Os dados de @_f.Nome e as ocorrências dela saem deste aparelho. Escalas já publicadas mantêm os dias, sem o nome.</p>
@@ -239,7 +257,8 @@
     }
 
     Edicao _f = new();
-    bool _novo, _confirmarRemocao;
+    bool _novo, _confirmarRemocao, _duplicando;
+    string _nomeDaCopia = "";
     Guid _id;
 
     Funcionario? Original => Dados.Funcionario(_id);
@@ -313,11 +332,53 @@
             Nav.NavigateTo(Volta);
     }
 
+    /// Aplica a folga extra a todos revezando a semana de início: com "a cada 2 semanas", metade da
+    /// equipe folga numa semana e metade na outra. Sem revezar, todo mundo folga no mesmo fim de
+    /// semana e a loja fica vazia. A ordem da lista é preservada — o gerador usa o índice no 12x36.
     async Task AplicarATodos()
     {
-        var extra = FolgaExtra();
-        await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios.Select(x => x with { FolgaExtra = extra })] },
-            "Folga extra aplicada a toda a equipe.");
+        if (FolgaExtra() is not { } modelo)
+        {
+            await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios.Select(x => x with { FolgaExtra = null })] },
+                "Folga extra removida de toda a equipe.");
+            return;
+        }
+        await Loja.Alterar(d =>
+        {
+            // quem está nesta ficha fica na semana escolhida; o resto se espalha pelas seguintes,
+            // intercalado por turno para nenhum turno ficar todo na mesma semana
+            var fase = d.Funcionarios
+                .OrderBy(x => x.Id == _id ? 0 : 1)
+                .ThenBy(x => x.TurnoPrincipal)
+                .ThenBy(x => x.Nome, StringComparer.Ordinal)
+                .Select((x, i) => (x.Id, Semana: i % modelo.ACadaSemanas))
+                .ToDictionary(t => t.Id, t => t.Semana);
+            return d with
+            {
+                Funcionarios = [.. d.Funcionarios.Select(x => x with
+                {
+                    FolgaExtra = modelo with { APartirDe = modelo.APartirDe.AddDays(7 * fase[x.Id]) },
+                })],
+            };
+        }, modelo.ACadaSemanas > 1
+            ? $"Folga extra aplicada, revezando a equipe em {modelo.ACadaSemanas} grupos."
+            : "Folga extra aplicada a toda a equipe.");
+    }
+
+    void AbrirDuplicar()
+    {
+        _nomeDaCopia = "";
+        _duplicando = true;
+    }
+
+    async Task Duplicar()
+    {
+        if (string.IsNullOrWhiteSpace(_nomeDaCopia)) return;
+        _duplicando = false;
+        // copia o que está na tela, inclusive o que ainda não foi salvo; matrícula é de cada pessoa
+        var copia = Montar() with { Id = Guid.NewGuid(), Nome = _nomeDaCopia.Trim(), Matricula = null };
+        if (await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios, copia] }, $"{copia.Nome} criado(a) a partir de {_f.Nome}."))
+            Nav.NavigateTo($"equipe/{copia.Id}");
     }
 
     async Task Remover()

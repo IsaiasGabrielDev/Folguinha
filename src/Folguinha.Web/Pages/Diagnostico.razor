@@ -162,7 +162,7 @@
             await Repositorio.Salvar(RepositorioDados.DeBackup(backup)!);
             await Recarregar();
             var planilha = Planilha();
-            var ok = gravado == 31 * 8 && Alocacoes.Count == gravado && planilha.Length > 1000;
+            var ok = gravado == 31 * _dados.Funcionarios.Count && Alocacoes.Count == gravado && planilha.Length > 1000;
             Log(ok ? $"AUTOTESTE OK (planilha {planilha.Length} bytes)" : $"AUTOTESTE FALHOU ({gravado}/{Alocacoes.Count}/{planilha.Length})");
         }
         catch (Exception ex)

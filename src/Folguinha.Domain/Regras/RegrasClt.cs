@@ -235,18 +235,25 @@ public sealed class CoberturaMinima() : Regra(Padrao)
         {
             if (ctx.DiasFechados.Contains(dia)) continue;
 
+            var doDia = ctx.Alocacoes.Where(a => a.Trabalha && a.Data == dia).ToList();
             foreach (var d in Demanda.Aplicaveis(ctx.Demandas, dia))
             {
-                var escalados = ctx.Alocacoes.Count(a => a.Trabalha && a.Data == dia && a.TurnoId == d.TurnoId
-                    && (d.FuncaoId is null || a.FuncaoId == d.FuncaoId));
+                var (escalados, instante) = d.EhFaixa
+                    ? d.MomentoMaisVazio(doDia)
+                    : (doDia.Count(a => a.TurnoId == d.TurnoId && (d.FuncaoId is null || a.FuncaoId == d.FuncaoId)), default);
                 var falta = d.Minimo - escalados;
                 if (falta <= 0) continue;
 
-                var turno = ctx.Turnos.FirstOrDefault(t => t.Id == d.TurnoId)?.Nome ?? "Turno";
                 var pessoas = falta == 1 ? "falta 1 pessoa" : $"faltam {falta} pessoas";
                 var funcao = ctx.Funcoes.FirstOrDefault(x => x.Id == d.FuncaoId) is { } fn ? $" na função {fn.Nome}" : "";
-                yield return Violacao(null, dia, $"{Dia(dia)} · {turno}: {pessoas}{funcao}.",
-                    "Veja os substitutos disponíveis para este turno.");
+                if (d.EhFaixa)
+                    yield return Violacao(null, dia,
+                        $"{Dia(dia)} · {Hora(d.Inicio!.Value)}–{Hora(d.Fim!.Value)}: {pessoas}{funcao} às {Hora(instante)}.",
+                        "Estenda um turno ou traga alguém que cubra esse horário.");
+                else
+                    yield return Violacao(null, dia,
+                        $"{Dia(dia)} · {ctx.Turnos.FirstOrDefault(t => t.Id == d.TurnoId)?.Nome ?? "Turno"}: {pessoas}{funcao}.",
+                        "Veja os substitutos disponíveis para este turno.");
             }
         }
     }

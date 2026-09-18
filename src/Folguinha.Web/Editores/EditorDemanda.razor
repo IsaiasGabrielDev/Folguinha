@@ -1,6 +1,42 @@
 @inherits PaginaBase
 
 <div class="pilha">
+    <div class="cartao">
+        <h2>Horários de mais fluxo</h2>
+        <p class="ajuda">Quantas pessoas precisam estar na loja ao mesmo tempo num intervalo — some quem estiver em
+            qualquer turno. Serve para pedir reforço no pico sem exigir o mesmo no horário morto.</p>
+        @foreach (var g in FaixasAgrupadas())
+        {
+            var grupo = g;
+            <div class="linha">
+                <span class="cresce">@grupo.Dias · @Formatos.Hora(grupo.Inicio)–@Formatos.Hora(grupo.Fim): @(grupo.Minimo == 1 ? "1 pessoa" : $"{grupo.Minimo} pessoas") ao mesmo tempo</span>
+                <button type="button" class="botao texto pequeno" aria-label="@($"Remover faixa de {grupo.Dias}")"
+                        @onclick="() => _demandas.RemoveAll(d => grupo.Ids.Contains(d))"><Icone Nome="lixo" Tamanho="18" /></button>
+            </div>
+        }
+        <fieldset class="pilha">
+            <legend class="ajuda">Em quais dias</legend>
+            <div class="segmentado">
+                @foreach (var d in Formatos.Semana)
+                {
+                    var dia = d;
+                    <button type="button" aria-pressed="@(_faixaDias.Contains(dia) ? "true" : "false")"
+                            @onclick="() => AlternarDia(dia, !_faixaDias.Contains(dia))">@Formatos.DiaSemanaCurto(dia)</button>
+                }
+            </div>
+        </fieldset>
+        <div class="grade-2 responsiva">
+            <label class="campo">Das <input type="time" @bind="_faixaInicio" /></label>
+            <label class="campo">Até <input type="time" @bind="_faixaFim" /></label>
+            <label class="campo">Pessoas ao mesmo tempo <input type="number" min="1" max="99" @bind="_faixaMinimo" /></label>
+        </div>
+        @if (_faixaErro is { } erro)
+        {
+            <p class="nota alerta">@erro</p>
+        }
+        <button type="button" class="botao" @onclick="AdicionarFaixa">Adicionar faixa</button>
+    </div>
+
     @if (Dados.Turnos.Count == 0)
     {
         <p class="nota alerta">Cadastre os turnos primeiro.</p>
@@ -118,6 +154,15 @@
     </div>
 
     <button type="button" class="botao primario" @onclick="Salvar">@TextoBotao</button>
+
+    @* a faixa recém-adicionada só vale depois de salvar, e a página é longa demais no celular *@
+    @if (Alterado)
+    {
+        <div class="espaco-flutuante" aria-hidden="true"></div>
+        <button type="button" class="botao primario flutuante" @onclick="Salvar">
+            <Icone Nome="ok" Tamanho="20" Traco="2" /> @TextoBotao
+        </button>
+    }
 </div>
 
 @code {
@@ -127,6 +172,12 @@
     sealed record Linha(string Rotulo, Guid? Funcao, bool Ideal);
 
     List<Demanda> _demandas = [];
+
+    bool Alterado => !_demandas.SequenceEqual(Dados.Demandas);
+    readonly HashSet<DayOfWeek> _faixaDias = [];
+    TimeOnly _faixaInicio = new(11, 0), _faixaFim = new(15, 0);
+    int _faixaMinimo = 2;
+    string? _faixaErro;
     DateOnly? _especialData;
     Guid _especialTurno;
     int _especialMinimo = 1, _especialIdeal = 1;
@@ -144,7 +195,38 @@
     static IEnumerable<Linha> Linhas(Guid _) => [new("Mínimo", null, false), new("Ideal", null, true)];
 
     Demanda? Buscar(Guid turno, Guid? funcao, DayOfWeek dia) =>
-        _demandas.FirstOrDefault(d => d.Data is null && d.TurnoId == turno && d.FuncaoId == funcao && d.DiaSemana == dia);
+        _demandas.FirstOrDefault(d => d.Data is null && !d.EhFaixa && d.TurnoId == turno && d.FuncaoId == funcao && d.DiaSemana == dia);
+
+    sealed record GrupoFaixa(string Dias, TimeOnly Inicio, TimeOnly Fim, int Minimo, List<Demanda> Ids);
+
+    /// Uma linha por faixa em vez de uma por dia: "Seg a Sex · 10:00–18:00" em lugar de cinco linhas.
+    IEnumerable<GrupoFaixa> FaixasAgrupadas() =>
+        _demandas.Where(d => d.EhFaixa)
+            .GroupBy(d => (d.Inicio!.Value, d.Fim!.Value, d.Minimo))
+            .OrderBy(g => g.Key.Item1).ThenBy(g => g.Key.Minimo)
+            .Select(g => new GrupoFaixa(
+                Formatos.ListaDeDias([.. g.Select(d => d.DiaSemana!.Value)]),
+                g.Key.Item1, g.Key.Item2, g.Key.Minimo, [.. g]));
+
+    void AlternarDia(DayOfWeek dia, bool marcado)
+    {
+        if (marcado) _faixaDias.Add(dia); else _faixaDias.Remove(dia);
+    }
+
+    void AdicionarFaixa()
+    {
+        _faixaErro = _faixaDias.Count == 0 ? "Escolha pelo menos um dia da semana."
+            : _faixaFim <= _faixaInicio ? "O fim da faixa tem que vir depois do início."
+            : null;
+        if (_faixaErro is not null) return;
+
+        foreach (var dia in _faixaDias)
+        {
+            _demandas.RemoveAll(d => d.EhFaixa && d.DiaSemana == dia && d.Inicio == _faixaInicio && d.Fim == _faixaFim);
+            _demandas.Add(new Demanda(null, _faixaMinimo, _faixaMinimo, DiaSemana: dia, Inicio: _faixaInicio, Fim: _faixaFim));
+        }
+        _faixaDias.Clear();
+    }
 
     string Valor(Guid turno, Guid? funcao, DayOfWeek dia, bool ideal) =>
         Buscar(turno, funcao, dia) is { } d ? (ideal ? d.Ideal : d.Minimo).ToString() : (funcao is null ? "0" : "");

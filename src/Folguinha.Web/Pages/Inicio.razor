@@ -145,6 +145,7 @@
         (Dados.Feriados.Count > 0, $"{Dados.Feriados.Count(f => f.Considerado)} feriado(s) considerados", Link(4)),
         (Dados.Funcionarios.Count > 0, $"{Dados.Funcionarios.Count} pessoa(s) na equipe", Link(5)),
         (Dados.Funcionarios.All(f => f.Situacao is not null), "Última folga de todos informada", Link(5)),
-        (Dados.Demandas.Count > 0, "Pessoas por turno definidas", Link(6)),
+        (Dados.Demandas.Any(d => !d.EhFaixa), "Pessoas por turno definidas", Link(6)),
+        (Dados.Demandas.Any(d => d.EhFaixa), "Horários de mais fluxo informados", Link(6)),
     ];
 }
