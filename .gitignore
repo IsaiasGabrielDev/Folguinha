@@ -466,3 +466,6 @@ artefatos/
 
 # Saída de publicação local
 publicado/
+
+# graphify
+graphify-out/
