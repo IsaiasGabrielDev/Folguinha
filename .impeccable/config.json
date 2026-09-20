@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "src/Folguinha.Web/wwwroot/index.html"
+        ],
+        "createdAt": "2026-09-20T23:44:00.977Z",
+        "reason": "user confirmed: escolheu endurecer o registro pela display e pelos raios, mantendo a paleta creme/coral dos mockups (docs/design/mockups)"
+      }
+    ]
+  }
+}
