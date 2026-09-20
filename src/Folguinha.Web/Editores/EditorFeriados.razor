@@ -78,7 +78,7 @@
             {
                 var feriado = f;
                 <li class="item">
-                    <div class="avatar @(f.Considerado ? "avatar-0" : "")" style="border-radius: 14px; flex-direction: column; line-height: 1; @(f.Considerado ? "" : "background: var(--superficie-2); color: var(--tinta-3);")">
+                    <div class="avatar @(f.Considerado ? "avatar-0" : "")" style="border-radius: 12px; flex-direction: column; line-height: 1; @(f.Considerado ? "" : "background: var(--superficie-2); color: var(--tinta-3);")">
                         <span>@f.Data.Day</span><span style="font-size: .6rem; font-family: var(--fonte);">@Formatos.MesCurto(f.Data.Month)</span>
                     </div>
                     <button type="button" class="cresce" style="text-align: left; background: none; border: 0; padding: 0; cursor: pointer;" @onclick="() => Editar(feriado)">

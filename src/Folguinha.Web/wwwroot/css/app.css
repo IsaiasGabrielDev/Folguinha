@@ -1,4 +1,6 @@
-/* Folguinha — direção "suave e amigável" (docs/design/mockups).
+/* Folguinha — creme e coral acolhedores, voz de documento. A paleta veio dos mockups
+   (docs/design/mockups); a display serifada e os raios menores vieram depois, para o app
+   não parecer um marcador de hábitos numa tela que fala de CLT.
    Cores de texto e botões ajustadas para contraste AA sobre o fundo creme. */
 :root {
     --bg: #FBF7F2;
@@ -26,10 +28,12 @@
     --laranja-suave: #FDEBDB;
     --laranja-tinta: #9A4A0C;
 
-    --fonte-titulo: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif;
+    /* Serifada quente: o app produz um documento que precisa se sustentar, não um hábito
+       para marcar. A paleta continua a mesma — quem endurece o registro é a voz e o raio. */
+    --fonte-titulo: 'Fraunces', Georgia, 'Times New Roman', serif;
     --fonte: 'Figtree', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --raio: 16px;
-    --raio-grande: 22px;
+    --raio: 12px;
+    --raio-grande: 16px;
     --sombra: 0 1px 2px rgba(60, 40, 20, .05), 0 8px 24px rgba(60, 40, 20, .05);
     --barra: 76px;
 }
@@ -46,10 +50,13 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 h1, h2, h3, p { margin: 0; text-wrap: pretty; }
-h1, h2, h3 { font-family: var(--fonte-titulo); font-weight: 600; line-height: 1.15; }
-h1 { font-size: 1.75rem; letter-spacing: -.01em; }
-h2 { font-size: 1.15rem; font-weight: 500; }
-h3 { font-size: 1rem; font-weight: 500; }
+h1, h2, h3 { font-family: var(--fonte-titulo); font-weight: 600; line-height: 1.2; font-optical-sizing: auto; }
+h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.15; letter-spacing: -.015em; }
+h2 { font-size: 1.15rem; }
+h3 { font-size: 1rem; }
+/* dígitos que se alinham em coluna: dias, contagens e cobertura */
+.estatistica strong, .dias-cobertura strong, .cobertura td,
+.grade-escala thead th strong, .calendario .dia strong { font-variant-numeric: tabular-nums; }
 a { color: var(--coral-tinta); }
 a:hover { color: var(--coral-forte); }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -131,7 +138,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .item .detalhe { color: var(--tinta-2); font-size: .8125rem; }
 
 .estatistica { display: flex; flex-direction: column; gap: .125rem; }
-.estatistica strong { font-family: var(--fonte-titulo); font-size: 1.5rem; font-weight: 600; }
+.estatistica strong { font-size: 1.5rem; font-weight: 700; }
 .estatistica span { color: var(--tinta-2); font-size: .8125rem; line-height: 1.25; }
 
 /* ---------- botões ---------- */
@@ -193,14 +200,14 @@ legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 .aviso { display: flex; flex-direction: column; gap: .375rem; padding: .875rem 1rem; border-radius: var(--raio-grande); background: var(--superficie); box-shadow: var(--sombra); }
 .aviso .mensagem { font-weight: 700; font-size: .9375rem; }
 .aviso .sugestao { color: var(--tinta-2); font-size: .8125rem; }
-.nota { display: flex; gap: .5rem; align-items: flex-start; padding: .625rem .75rem; border-radius: 14px; background: var(--superficie-2); color: var(--tinta-2); font-size: .8125rem; }
+.nota { display: flex; gap: .5rem; align-items: flex-start; padding: .625rem .75rem; border-radius: var(--raio); background: var(--superficie-2); color: var(--tinta-2); font-size: .8125rem; }
 .nota.alerta { background: var(--ambar-suave); color: var(--ambar-tinta); }
 .nota.erro { background: var(--rosa-suave); color: var(--rosa-tinta); }
 .nota.ok { background: var(--verde-suave); color: var(--verde-tinta); }
 .toast {
     position: fixed; left: 50%; transform: translateX(-50%); z-index: 50;
     bottom: calc(var(--barra) + env(safe-area-inset-bottom) + .75rem);
-    width: max-content; max-width: min(28rem, calc(100% - 2rem)); padding: .75rem 1rem; border-radius: 14px;
+    width: max-content; max-width: min(28rem, calc(100% - 2rem)); padding: .75rem 1rem; border-radius: var(--raio);
     background: var(--tinta); color: #fff; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2);
     display: flex; gap: .75rem; align-items: center;
 }
@@ -212,7 +219,7 @@ legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 .vazio h2 { color: var(--tinta); }
 
 /* ---------- avatar ---------- */
-.avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; flex: none; font-family: var(--fonte-titulo); font-weight: 600; font-size: .9375rem; }
+.avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 700; font-size: .9375rem; }
 .avatar.grande { width: 4rem; height: 4rem; font-size: 1.5rem; }
 .avatar.mini { width: 1.75rem; height: 1.75rem; font-size: .6875rem; font-family: var(--fonte); font-weight: 700; }
 .avatar-0 { background: var(--coral-suave); color: var(--coral-tinta); }
@@ -264,10 +271,10 @@ legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 .calendario .dia.feriado { outline: 2px solid var(--coral); outline-offset: -2px; }
 
 .dias-cobertura { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .375rem; }
-.dias-cobertura > div { display: flex; flex-direction: column; align-items: center; gap: .125rem; padding: .5rem 0; border-radius: 14px; background: var(--superficie-2); }
+.dias-cobertura > div { display: flex; flex-direction: column; align-items: center; gap: .125rem; padding: .5rem 0; border-radius: var(--raio); background: var(--superficie-2); }
 .dias-cobertura > div.falta { background: var(--rosa-suave); }
 .dias-cobertura span { font-size: .6875rem; font-weight: 600; color: var(--tinta-2); }
-.dias-cobertura strong { font-family: var(--fonte-titulo); font-size: 1.05rem; }
+.dias-cobertura strong { font-size: 1.05rem; font-weight: 700; }
 .dias-cobertura em { font-style: normal; font-size: .6875rem; font-weight: 700; color: var(--verde-tinta); }
 .dias-cobertura .falta em, .dias-cobertura .falta strong { color: var(--rosa-tinta); }
 
