@@ -1,4 +1,4 @@
-using Folguinha.Domain;
+﻿using Folguinha.Domain;
 using Folguinha.Domain.Geracao;
 using Folguinha.Domain.Regras;
 using static Folguinha.Domain.Texto;
@@ -122,6 +122,8 @@ public static class Escalas
             Travadas = existente?.Atual.Where(a => a.Travada).ToList() ?? [],
             Regras = Regras(dados, inicio),
             RodizioFeriados = dados.RodizioFeriados,
+            CompensarFeriado = dados.CompensarFeriado,
+            RodizioTurnos = dados.RodizioTurnos,
         });
 
         var escala = (existente ?? new Escala(Guid.NewGuid(), inicio, fim)) with { Rascunho = resultado.Alocacoes };

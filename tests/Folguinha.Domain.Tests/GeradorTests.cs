@@ -1,4 +1,4 @@
-using Folguinha.Domain.Geracao;
+﻿using Folguinha.Domain.Geracao;
 using Folguinha.Domain.Regras;
 using static Folguinha.Domain.Tests.Dados;
 
@@ -246,5 +246,56 @@ public class GeradorTests
         var novembro = GeradorEscala.Gerar(Varejo(equipe) with { Inicio = D(1, 11), Fim = D(30, 11), Historico = outubro.Alocacoes });
 
         Assert.DoesNotContain(novembro.Violacoes, v => v.Severidade is Severidade.Bloqueio or Severidade.Critico);
+    }
+
+    /// Uma pessoa só, sem demanda: isola a contagem de dias da disputa por cobertura.
+    static EntradaGeracao Sozinha(Funcionario f) => new()
+    {
+        Empresa = Comercio, Inicio = D(1), Fim = D(31), Funcionarios = [f], Turnos = [Manha, Tarde],
+        Feriados = [Aparecida],
+    };
+
+    [Fact]
+    public void Quem_trabalha_no_feriado_folga_um_dia_a_mais_na_semana_seguinte()
+    {
+        // Aparecida cai na segunda 12/10; a semana seguinte vai de 19 a 25/10
+        var bia = Func("Bia");
+        // trava o feriado como dia de trabalho nas duas gerações: só a compensação muda
+        var noFeriado = Alocacao.Trabalho(bia.Id, D(12), Manha.Inicio, Manha.Fim, Manha.Intervalo, Manha.Id) with { Travada = true };
+        var entrada = Sozinha(bia) with { Travadas = [noFeriado] };
+
+        var com = GeradorEscala.Gerar(entrada with { CompensarFeriado = true });
+        var sem = GeradorEscala.Gerar(entrada);
+
+        Assert.Equal(6, DiasTrabalhados(sem, bia, D(19), D(25)));
+        Assert.Equal(5, DiasTrabalhados(com, bia, D(19), D(25)));
+    }
+
+    [Fact]
+    public void Quem_folga_no_feriado_nao_ganha_compensacao()
+    {
+        var bia = Func("Bia") with { Situacao = new SituacaoInicial(D(1), TrabalhouUltimoFeriado: false) };
+        var folgaNoFeriado = Alocacao.Folga(bia.Id, D(12)) with { Travada = true };
+
+        var r = GeradorEscala.Gerar(Sozinha(bia) with { CompensarFeriado = true, Travadas = [folgaNoFeriado] });
+
+        Assert.Equal(6, DiasTrabalhados(r, bia, D(19), D(25)));
+    }
+
+    [Fact]
+    public void Rodizio_de_turnos_tira_a_pessoa_do_turno_principal_durante_o_mes()
+    {
+        var equipe = Nomes.Select(n => Func(n) with { TurnoPrincipal = Manha.Id }).ToArray();
+        var entrada = Varejo(equipe);
+
+        var sem = GeradorEscala.Gerar(entrada);
+        var com = GeradorEscala.Gerar(entrada with { RodizioTurnos = true });
+
+        int NaTarde(ResultadoGeracao r, Funcionario f) =>
+            r.Alocacoes.Count(a => a.FuncionarioId == f.Id && a.Trabalha && a.TurnoId == Tarde.Id);
+
+        Assert.All(equipe, f => Assert.True(NaTarde(com, f) > 0, $"{f.Nome} nunca pegou a tarde"));
+        Assert.True(equipe.Sum(f => NaTarde(com, f)) > equipe.Sum(f => NaTarde(sem, f)));
+        Assert.DoesNotContain(com.Violacoes, v => v.Severidade is Severidade.Bloqueio or Severidade.Critico);
     }
 }

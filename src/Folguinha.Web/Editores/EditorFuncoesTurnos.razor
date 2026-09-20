@@ -1,4 +1,4 @@
-@inherits PaginaBase
+﻿@inherits PaginaBase
 
 <div class="pilha">
     <div class="cartao">
@@ -28,6 +28,17 @@
             </fieldset>
         }
         <button type="button" class="botao" @onclick="NovoTurno"><Icone Nome="mais-um" Tamanho="18" /> Adicionar turno</button>
+    </div>
+
+    <div class="cartao destaque">
+        <label class="linha fixa" style="gap: .75rem; cursor: pointer;">
+            <span class="cresce">
+                <strong>Rodízio de turnos</strong><br />
+                <span class="ajuda pequeno">Cada pessoa passa por todos os turnos ao longo do mês, trocando na virada
+                    da semana. O turno principal de cada um vira só preferência.</span>
+            </span>
+            <input class="interruptor" type="checkbox" checked="@Dados.RodizioTurnos" @onchange="AlternarRodizioTurnos" />
+        </label>
     </div>
 
     <div class="cartao">
@@ -73,6 +84,8 @@
     List<Turno> _turnos = [];
     List<Funcao> _funcoes = [];
     string _novaFuncao = "";
+
+    Task AlternarRodizioTurnos() => Loja.Alterar(d => d with { RodizioTurnos = !d.RodizioTurnos });
 
     DadosDaUnidade DadosTemporarios => Dados with { Turnos = _turnos };
 

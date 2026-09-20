@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Folguinha.Domain;
 
@@ -27,6 +27,8 @@ public sealed record DadosDaUnidade
     public IReadOnlyList<Feriado> Feriados { get; init; } = [];
     public IReadOnlyList<int> AnosDeFeriadosCarregados { get; init; } = [];
     public bool RodizioFeriados { get; init; } = true;
+    public bool CompensarFeriado { get; init; }
+    public bool RodizioTurnos { get; init; }
     public IReadOnlyList<Ocorrencia> Ocorrencias { get; init; } = [];
     public IReadOnlyList<RegraConfigurada> RegrasConfiguradas { get; init; } = [];
     public IReadOnlyList<Escala> Escalas { get; init; } = [];

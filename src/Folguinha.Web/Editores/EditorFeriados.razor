@@ -1,4 +1,4 @@
-@inherits PaginaBase
+﻿@inherits PaginaBase
 @inject IFeriadoProvider Provedor
 
 <div class="pilha">
@@ -58,6 +58,13 @@
                 <span class="ajuda pequeno">Quem trabalhou no último feriado tem prioridade para folgar no próximo.</span>
             </span>
             <input class="interruptor" type="checkbox" checked="@Dados.RodizioFeriados" @onchange="AlternarRodizio" />
+        </label>
+        <label class="linha fixa" style="gap: .75rem; cursor: pointer;">
+            <span class="cresce">
+                <strong>Folga compensatória</strong><br />
+                <span class="ajuda pequeno">Quem trabalha no feriado folga um dia a mais na semana seguinte.</span>
+            </span>
+            <input class="interruptor" type="checkbox" checked="@Dados.CompensarFeriado" @onchange="AlternarCompensar" />
         </label>
     </div>
 
@@ -186,6 +193,8 @@
     }
 
     Task AlternarRodizio() => Loja.Alterar(d => d with { RodizioFeriados = !d.RodizioFeriados });
+
+    Task AlternarCompensar() => Loja.Alterar(d => d with { CompensarFeriado = !d.CompensarFeriado });
 
     Task Alternar(Feriado f) => Loja.Alterar(d => Feriados.Salvar(d, f, f with { Considerado = !f.Considerado }));
 

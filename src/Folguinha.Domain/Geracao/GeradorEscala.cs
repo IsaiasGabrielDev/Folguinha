@@ -1,4 +1,4 @@
-using Folguinha.Domain.Regras;
+﻿using Folguinha.Domain.Regras;
 using static Folguinha.Domain.Texto;
 
 namespace Folguinha.Domain.Geracao;
@@ -23,6 +23,12 @@ public sealed record EntradaGeracao
     public IReadOnlyList<Alocacao> Travadas { get; init; } = [];
     public IReadOnlyList<Regra> Regras { get; init; } = CatalogoRegras.Padrao();
     public bool RodizioFeriados { get; init; } = true;
+    /// Quem trabalhou num feriado folga um dia a mais na semana seguinte (Lei 605/49, art. 9º).
+    /// Desligado por padrão: numa equipe justa, todo mundo folgando a mais deixa a semana seguinte
+    /// sem cobertura — a alternativa legal é pagar o feriado em dobro.
+    public bool CompensarFeriado { get; init; }
+    /// Turno principal vira só preferência: cada pessoa passa por todos os turnos ao longo do mês.
+    public bool RodizioTurnos { get; init; }
 }
 
 public sealed record ResultadoGeracao(IReadOnlyList<Alocacao> Alocacoes, IReadOnlyList<Violacao> Violacoes)
@@ -223,7 +229,8 @@ sealed class Execucao
         var considerados = dias.Count + antes.Count;
         var alvo = considerados >= 7 ? cota : (int)Math.Round(cota * considerados / 7.0, MidpointRounding.AwayFromZero);
         var jaTrabalhados = antes.Count(d => doFuncionario[f.Id].Any(a => a.Data == d && a.Trabalha));
-        var extras = (f.FolgaExtra?.NaSemana(segunda) ?? 0) + dias.Count(d => FolgaExtraAvulsa(f, d));
+        var extras = (f.FolgaExtra?.NaSemana(segunda) ?? 0) + dias.Count(d => FolgaExtraAvulsa(f, d))
+            + CompensacaoDeFeriado(f, segunda);
         return Math.Clamp(alvo - jaTrabalhados - extras, 0, dias.Count);
     }
 
@@ -273,8 +280,9 @@ sealed class Execucao
         foreach (var f in trabalhadores.ToList())
         {
             var turnos = e.Turnos.Where(t => f.PodeTurno(t.Id))
-                .OrderByDescending(t => t.Id == f.TurnoPrincipal)
+                .OrderByDescending(t => !e.RodizioTurnos && t.Id == f.TurnoPrincipal)
                 .ThenByDescending(t => FaltaNoTurno(t, vagas, hoje))
+                .ThenBy(t => e.RodizioTurnos ? VezesNoTurno(f, t.Id, dia) : 0)
                 .ThenBy(t => ContarNoTurno(t.Id, hoje)) // sobrou gente e a demanda esta atendida: equilibra os turnos
                 .ThenBy(t => TurnoIndex(t.Id));
             var aloc = turnos.Select(t => Tentar(f, dia, t, null)).FirstOrDefault(a => a is not null);
@@ -312,8 +320,11 @@ sealed class Execucao
                 .Where(x => x.aloc is not null)
                 .OrderBy(x => Preferido(x.f, dia, x.t) ? 0 : 1)
                 .ThenBy(x => vaga.FuncaoId is null && x.f.Funcoes is { Count: > 0 } ? 1 : 0) // guarda especialistas
-                .ThenBy(x => x.f.TurnoPrincipal is null || x.f.TurnoPrincipal == x.t.Id ? 0 : 1)
+                .ThenBy(x => e.RodizioTurnos || x.f.TurnoPrincipal is null || x.f.TurnoPrincipal == x.t.Id ? 0 : 1)
+                // o turno de ontem vem antes do rodízio: a pessoa troca de turno na virada da semana,
+                // depois da folga, e não de um dia para o outro
                 .ThenBy(x => TurnoDeOntem(x.f, dia) is { } ontem && ontem != x.t.Id ? 1 : 0)
+                .ThenBy(x => e.RodizioTurnos ? VezesNoTurno(x.f, x.t.Id, dia) : 0)
                 .ThenBy(x => HorasNoPeriodo(x.f))
                 .ThenBy(x => x.f.Nome, StringComparer.Ordinal).ThenBy(x => x.f.Id)
                 .FirstOrDefault();
@@ -417,6 +428,19 @@ sealed class Execucao
         e.Ocorrencias.Any(o => o.FuncionarioId == f.Id && o.Tipo == TipoOcorrencia.FolgaExtra && o.Cobre(dia));
 
     bool Trabalhou(Funcionario f, DateOnly dia) => doFuncionario[f.Id].Any(a => a.Data == dia && a.Trabalha);
+
+    /// Folgas a mais nesta semana por feriado trabalhado na semana anterior. Feriado na última
+    /// semana do período fica sem compensação: ela cai na escala seguinte, quando for gerada.
+    /// ponytail: não marca o que já foi compensado — regerar um período que começa logo depois
+    /// do feriado compensa de novo; some o histórico da escala anterior para evitar.
+    int CompensacaoDeFeriado(Funcionario f, DateOnly segunda) =>
+        e.CompensarFeriado
+            ? feriados.Count(x => x.Data >= segunda.AddDays(-7) && x.Data < segunda && Trabalhou(f, x.Data))
+            : 0;
+
+    /// Vezes que a pessoa fez esse turno nas últimas 4 semanas — quem fez menos entra primeiro.
+    int VezesNoTurno(Funcionario f, Guid turnoId, DateOnly dia) =>
+        doFuncionario[f.Id].Count(a => a.Trabalha && a.TurnoId == turnoId && a.Data >= dia.AddDays(-28) && a.Data < dia);
 
     Guid? TurnoDeOntem(Funcionario f, DateOnly dia) =>
         doFuncionario[f.Id].LastOrDefault(a => a.Data == dia.AddDays(-1) && a.Trabalha)?.TurnoId;
