@@ -145,6 +145,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .botao.primario { background: var(--coral-forte); border-color: var(--coral-forte); color: #fff; box-shadow: 0 6px 16px rgba(184, 78, 46, .25); }
 .botao.primario:hover { background: var(--coral-tinta); color: #fff; }
 .botao.perigo { color: var(--rosa-tinta); border-color: #F2C3CA; }
+/* confirmação de ação irreversível: a ênfase é do vermelho, não do coral de "seguir em frente" */
+.botao.primario.perigo { background: var(--rosa-tinta); border-color: var(--rosa-tinta); color: #fff; box-shadow: 0 6px 16px rgba(166, 43, 60, .25); }
+.botao.primario.perigo:hover { background: #8D2232; color: #fff; }
 .botao.texto { border-color: transparent; background: transparent; color: var(--coral-tinta); padding: 0 .5rem; }
 .botao.pequeno { min-height: 40px; font-size: .875rem; padding: 0 .75rem; }
 .botao.cheio { width: 100%; }
@@ -225,6 +228,9 @@ legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 .cel-turno-2 { background: var(--lilas-suave); color: var(--lilas-tinta); }
 .cel-turno-3 { background: var(--azul-suave); color: var(--azul-tinta); }
 .cel-turno-4 { background: #E6F2DC; color: #3F6A22; }
+.cel-turno-5 { background: var(--laranja-suave); color: var(--laranja-tinta); }
+.cel-turno-6 { background: #F0E4EE; color: #7A3A66; }
+.cel-turno-7 { background: #DCE7EC; color: #2A5566; }
 .cel-folga { background: var(--superficie-2); color: var(--tinta-3); }
 .cel-ausencia { background: var(--rosa-suave); color: var(--rosa-tinta); }
 .cel-vazia { background: transparent; color: var(--tinta-3); }

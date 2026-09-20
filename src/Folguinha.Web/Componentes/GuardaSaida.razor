@@ -1,0 +1,17 @@
+@* Trava a saída de um editor com trabalho não salvo. A nav de baixo fica sempre visível:
+   sem isso, um toque descarta em silêncio o que a pessoa acabou de preencher. *@
+@inject IJSRuntime JS
+
+<NavigationLock OnBeforeInternalNavigation="Confirmar" ConfirmExternalNavigation="@Alterado" />
+
+@code {
+    [Parameter] public bool Alterado { get; set; }
+
+    [Parameter] public string Pergunta { get; set; } = "Você mudou coisas aqui e ainda não salvou. Sair e perder as alterações?";
+
+    async Task Confirmar(LocationChangingContext contexto)
+    {
+        if (!Alterado) return;
+        if (!await JS.InvokeAsync<bool>("confirm", Pergunta)) contexto.PreventNavigation();
+    }
+}

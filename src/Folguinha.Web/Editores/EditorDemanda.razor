@@ -1,5 +1,6 @@
 @inherits PaginaBase
 
+<GuardaSaida Alterado="Alterado" />
 <div class="pilha">
     <div class="cartao">
         <h2>Horários de mais fluxo</h2>
@@ -46,7 +47,7 @@
         var t = turno;
         <div class="cartao">
             <div class="linha">
-                <span class="chip @Formatos.ClasseTurno(Dados, t.Id)">@Formatos.Sigla(t.Nome)</span>
+                <span class="chip @Formatos.ClasseTurno(Dados, t.Id)">@Formatos.Sigla(Dados, t.Nome)</span>
                 <h2 class="cresce">@t.Nome</h2>
                 <span class="ajuda pequeno">@Formatos.Hora(t.Inicio)–@Formatos.Hora(t.Fim)</span>
             </div>

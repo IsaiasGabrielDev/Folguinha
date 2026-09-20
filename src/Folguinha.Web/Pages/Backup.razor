@@ -43,15 +43,23 @@
     <p>O backup de <strong>@_importado?.Empresa?.Nome</strong> (@_importado?.Funcionarios.Count pessoas, @_importado?.Escalas.Count escalas) vai substituir tudo o que está neste aparelho.</p>
     <div class="acoes">
         <button class="botao" @onclick="() => _importado = null">Cancelar</button>
-        <button class="botao primario" @onclick="Importar">Substituir</button>
+        <button class="botao primario perigo" @onclick="Importar">Substituir</button>
     </div>
 </Folha>
 
 <Folha Aberta="_confirmar" Titulo="Apagar tudo?" AoFechar="() => _confirmar = false">
-    <p>Essa ação não pode ser desfeita.</p>
+    <p>
+        Saem deste aparelho <strong>@Dados.Funcionarios.Count pessoas</strong>,
+        <strong>@Dados.Escalas.Count escalas</strong> e
+        <strong>@Dados.Ocorrencias.Count ocorrências</strong>.
+        Os dados existem só aqui: essa ação não pode ser desfeita.
+    </p>
     <div class="acoes">
         <button class="botao" @onclick="() => _confirmar = false">Cancelar</button>
-        <button class="botao primario" @onclick="Apagar">Apagar</button>
+        <button class="botao" disabled="@(Dados.Empresa is null)" @onclick="Exportar">
+            <Icone Nome="backup" Tamanho="18" /> Exportar antes
+        </button>
+        <button class="botao primario perigo" @onclick="Apagar">Apagar</button>
     </div>
 </Folha>
 

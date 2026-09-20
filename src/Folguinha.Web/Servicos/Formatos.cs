@@ -121,9 +121,16 @@ public static class Formatos
         _ => "sev-info",
     };
 
-    public static string Estado(Escala e, bool semBloqueio) => e.Estado switch
+    /// semBloqueio null = ainda não se sabe (validação rodando, ou lista que não valida nada).
+    /// "Validado" é a palavra com peso jurídico do app: só sai depois que as regras rodaram.
+    public static string Estado(Escala e, bool? semBloqueio) => e.Estado switch
     {
-        EstadoEscala.Rascunho => semBloqueio ? "Rascunho validado" : "Rascunho",
+        EstadoEscala.Rascunho => semBloqueio switch
+        {
+            null => "Rascunho · verificando…",
+            true => "Rascunho validado",
+            false => "Rascunho",
+        },
         EstadoEscala.EmValidacao => "Alterações não publicadas",
         EstadoEscala.Publicada => $"Publicada · v{e.Versoes.Count}",
         EstadoEscala.Alterada => $"Publicada · v{e.Versoes.Count}",
@@ -144,21 +151,35 @@ public static class Formatos
         null => "cel-vazia",
         { Tipo: TipoAlocacao.Folga } => "cel-folga",
         { Tipo: TipoAlocacao.Ocorrencia } => "cel-ausencia",
-        _ => $"cel-turno-{Math.Max(0, dados.Turnos.ToList().FindIndex(t => t.Id == a.TurnoId)) % 5}",
+        _ => $"cel-turno-{Math.Max(0, dados.Turnos.ToList().FindIndex(t => t.Id == a.TurnoId)) % 8}",
     };
 
     public static string ClasseTurno(DadosDaUnidade dados, Guid turnoId) =>
-        $"cel-turno-{Math.Max(0, dados.Turnos.ToList().FindIndex(t => t.Id == turnoId)) % 5}";
+        $"cel-turno-{Math.Max(0, dados.Turnos.ToList().FindIndex(t => t.Id == turnoId)) % 8}";
 
     public static string Sigla(DadosDaUnidade dados, Alocacao? a) => a switch
     {
         null => "–",
         { Tipo: TipoAlocacao.Folga } => "F",
         { Tipo: TipoAlocacao.Ocorrencia } => "A",
-        _ => Sigla(dados.Turnos.FirstOrDefault(t => t.Id == a.TurnoId)?.Nome ?? "T"),
+        _ => Sigla(dados, dados.Turnos.FirstOrDefault(t => t.Id == a.TurnoId)?.Nome ?? "T"),
     };
 
-    public static string Sigla(string nome) => nome.Length <= 2 ? nome : nome[..1].ToUpperInvariant();
+    /// Sigla do turno na célula da grade. É o canal redundante da cor, então precisa ser única:
+    /// duas letras quando outro turno começa com a mesma inicial ("Manhã" e "Meio-dia" viram
+    /// Ma e Me, não dois M).
+    /// ponytail: para em 2 letras — "Manhã" e "Manhã 2" ainda colidem. Prefixo mais longo só
+    /// se alguém nomear turnos assim.
+    public static string Sigla(DadosDaUnidade dados, string nome) => Sigla(dados.Turnos, nome);
+
+    public static string Sigla(IReadOnlyList<Turno> turnos, string nome)
+    {
+        if (nome.Length <= 2) return nome;
+        var colide = turnos.Count(t => t.Nome.StartsWith(nome[..1], StringComparison.OrdinalIgnoreCase)) > 1;
+        return colide
+            ? char.ToUpperInvariant(nome[0]) + nome[1..2].ToLowerInvariant()
+            : nome[..1].ToUpperInvariant();
+    }
 
     public static string Iniciais(string nome)
     {

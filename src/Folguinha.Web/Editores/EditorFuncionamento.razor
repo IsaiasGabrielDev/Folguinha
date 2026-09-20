@@ -1,5 +1,6 @@
 @inherits PaginaBase
 
+<GuardaSaida Alterado="Alterado" />
 <div class="pilha">
     <div class="cartao">
         <ul class="lista">
@@ -80,6 +81,11 @@
     List<PeriodoFuncionamento> _periodos = [];
     List<DateOnly> _fechadas = [];
     DateOnly? _novaData;
+    (List<PeriodoFuncionamento> Periodos, List<DateOnly> Fechadas) _comoAbriu;
+
+    /// Compara com o que a tela carregou, não com o que está salvo: no primeiro uso os
+    /// horários vêm de um padrão que ninguém digitou, e avisar sobre isso seria ruído.
+    bool Alterado => !_periodos.SequenceEqual(_comoAbriu.Periodos) || !_fechadas.SequenceEqual(_comoAbriu.Fechadas);
 
     protected override void OnInitialized()
     {
@@ -88,6 +94,7 @@
             ? [.. Dados.Funcionamento]
             : [.. Formatos.Semana.Select(d => new PeriodoFuncionamento(d, new(8, 0), new(22, 0)))];
         _fechadas = [.. Dados.DatasFechadas];
+        _comoAbriu = ([.. _periodos], [.. _fechadas]);
     }
 
     void Adicionar(DayOfWeek dia)
@@ -122,6 +129,8 @@
             Funcionamento = [.. _periodos.OrderBy(p => (((int)p.Dia + 6) % 7, p.Abre))],
             DatasFechadas = [.. _fechadas.Order()],
         }, AoSalvar.HasDelegate ? null : "Horário salvo.");
-        if (ok) await AoSalvar.InvokeAsync();
+        if (!ok) return;
+        _comoAbriu = ([.. _periodos], [.. _fechadas]); // salvo: a guarda de saída não pergunta nada
+        await AoSalvar.InvokeAsync();
     }
 }

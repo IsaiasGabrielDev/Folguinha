@@ -15,7 +15,7 @@
     <select value="@_escala?.Id" @onchange="Trocar">
         @foreach (var e in Dados.Escalas.OrderByDescending(e => e.Inicio))
         {
-            <option value="@e.Id">@Formatos.Periodo(e) · @Formatos.Estado(e, true)</option>
+            <option value="@e.Id">@Formatos.Periodo(e) · @Formatos.Estado(e, null)</option>
         }
     </select>
 </label>

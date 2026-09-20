@@ -30,7 +30,7 @@
                         var marcado = atual is { Trabalha: true } && atual.TurnoId == t.Id && atual.Inicio == t.Inicio && atual.Fim == t.Fim;
                         <button type="button" class="botao pequeno @(marcado ? "primario" : "")" aria-pressed="@(marcado ? "true" : "false")" disabled="@_ocupado"
                                 @onclick="() => Aplicar(Alocacao.Trabalho(Funcionario.Id, Dia, turno.Inicio, turno.Fim, turno.Intervalo, turno.Id, FuncaoPara(turno)))">
-                            <span class="chip @Formatos.ClasseTurno(Dados, t.Id)" aria-hidden="true">@Formatos.Sigla(t.Nome)</span>
+                            <span class="chip @Formatos.ClasseTurno(Dados, t.Id)" aria-hidden="true">@Formatos.Sigla(Dados, t.Nome)</span>
                             @t.Nome @Formatos.Hora(t.Inicio)–@Formatos.Hora(t.Fim)
                         </button>
                     }

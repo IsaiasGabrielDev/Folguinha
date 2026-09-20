@@ -16,7 +16,7 @@ else
     <Cabecalho Titulo="@Formatos.Periodo(_escala)" Subtitulo="Escala">
         <Acoes>
             <div class="linha">
-                <span class="chip @Formatos.ClasseEstado(_escala)">@Formatos.Estado(_escala, Bloqueios == 0)</span>
+                <span class="chip @Formatos.ClasseEstado(_escala)">@Formatos.Estado(_escala, _validando ? null : Bloqueios == 0)</span>
                 @if (_escala.Rascunho is not null && !_escala.Encerrada)
                 {
                     <button class="botao primario pequeno" disabled="@_validando" @onclick="() => _publicar = true">Publicar</button>
@@ -33,7 +33,7 @@ else
                 <select value="@_escala.Id" @onchange="TrocarEscala">
                     @foreach (var e in Dados.Escalas.OrderByDescending(e => e.Inicio))
                     {
-                        <option value="@e.Id">@Formatos.Periodo(e) · @Formatos.Estado(e, true)</option>
+                        <option value="@e.Id">@Formatos.Periodo(e) · @Formatos.Estado(e, null)</option>
                     }
                 </select>
             </label>
@@ -91,7 +91,7 @@ else
     <div class="legenda" aria-label="Legenda">
         @foreach (var t in Dados.Turnos)
         {
-            <span class="chip @Formatos.ClasseTurno(Dados, t.Id)">@Formatos.Sigla(t.Nome) = @t.Nome</span>
+            <span class="chip @Formatos.ClasseTurno(Dados, t.Id)">@Formatos.Sigla(Dados, t.Nome) = @t.Nome</span>
         }
         <span class="chip cel-folga">F = Folga</span>
         <span class="chip cel-ausencia">A = Ausência</span>

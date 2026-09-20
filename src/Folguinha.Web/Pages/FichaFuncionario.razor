@@ -18,6 +18,8 @@
     <ResumoFuncionario Funcionario="pessoa" />
 }
 
+<GuardaSaida Alterado="Alterado" />
+
 <form class="pilha" @onsubmit="Salvar" @onsubmit:preventDefault>
     <section class="cartao">
         <h2>Dados</h2>
@@ -212,7 +214,7 @@
     <p>Os dados de @_f.Nome e as ocorrências dela saem deste aparelho. Escalas já publicadas mantêm os dias, sem o nome.</p>
     <div class="acoes">
         <button type="button" class="botao" @onclick="() => _confirmarRemocao = false">Cancelar</button>
-        <button type="button" class="botao primario" @onclick="Remover">Remover</button>
+        <button type="button" class="botao primario perigo" @onclick="Remover">Remover</button>
     </div>
 </Folha>
 
@@ -257,6 +259,10 @@
     }
 
     Edicao _f = new();
+    /// Edicao é mutável, então não dá para comparar por igualdade: guarda o JSON de como a
+    /// ficha abriu e compara com o de agora.
+    string _comoAbriu = "";
+    bool Alterado => System.Text.Json.JsonSerializer.Serialize(_f) != _comoAbriu;
     bool _novo, _confirmarRemocao, _duplicando;
     string _nomeDaCopia = "";
     Guid _id;
@@ -270,6 +276,7 @@
         _novo = Id == "novo";
         _id = _novo ? Guid.NewGuid() : Guid.TryParse(Id, out var g) ? g : Guid.Empty;
         if (Original is { } f) _f = Carregar(f);
+        _comoAbriu = System.Text.Json.JsonSerializer.Serialize(_f);
     }
 
     static Edicao Carregar(Funcionario f) => new()
@@ -329,7 +336,10 @@
         if (string.IsNullOrWhiteSpace(_f.Nome)) return;
         var novo = Montar();
         if (await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios.Where(x => x.Id != novo.Id), novo] }, $"{novo.Nome} salvo(a)."))
+        {
+            _comoAbriu = System.Text.Json.JsonSerializer.Serialize(_f); // salvo: a guarda de saída não pergunta nada
             Nav.NavigateTo(Volta);
+        }
     }
 
     /// Aplica a folga extra a todos revezando a semana de início: com "a cada 2 semanas", metade da

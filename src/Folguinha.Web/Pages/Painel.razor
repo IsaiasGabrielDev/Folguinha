@@ -20,7 +20,7 @@
 else
 {
     <div class="linha">
-        <a class="chip @Formatos.ClasseEstado(_escala)" href="@($"escala?id={_escala.Id}")">@Formatos.Periodo(_escala) · @Formatos.Estado(_escala, Bloqueios == 0)</a>
+        <a class="chip @Formatos.ClasseEstado(_escala)" href="@($"escala?id={_escala.Id}")">@Formatos.Periodo(_escala) · @Formatos.Estado(_escala, _validando ? null : Bloqueios == 0)</a>
         @if (PessoasSemSituacao > 0)
         {
             <a class="chip sev-atencao" href="equipe">@PessoasSemSituacao sem última folga</a>
