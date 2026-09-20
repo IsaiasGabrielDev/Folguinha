@@ -21,73 +21,40 @@ else
                 {
                     <button class="botao primario pequeno" disabled="@_validando" @onclick="() => _publicar = true">Publicar</button>
                 }
+                <button class="botao pequeno" @onclick="() => _mais = true" aria-haspopup="dialog">Opções</button>
             </div>
         </Acoes>
     </Cabecalho>
 
-    <div class="linha entre">
-        @if (Dados.Escalas.Count > 1)
-        {
-            <label class="campo" style="flex: 1 1 12rem;">
-                <span class="sr-only">Escolher escala</span>
-                <select value="@_escala.Id" @onchange="TrocarEscala">
-                    @foreach (var e in Dados.Escalas.OrderByDescending(e => e.Inicio))
-                    {
-                        <option value="@e.Id">@Formatos.Periodo(e) · @Formatos.Estado(e, null)</option>
-                    }
-                </select>
-            </label>
-        }
-        <div class="linha">
-            <button class="botao pequeno" @onclick="() => _gerar = true"><Icone Nome="mais-um" Tamanho="16" /> Nova</button>
-            <button class="botao pequeno" @onclick="() => _mais = true" aria-haspopup="dialog">Opções</button>
+    @* Acima da grade fica só o que muda o recorte de tempo. Troca de escala, filtros e
+       ações de baixa frequência estão em "Opções"; a legenda desce para depois da grade.
+       A grade é o objeto da tela e precisa caber na primeira dobra de um celular. *@
+    <div class="controles-periodo">
+        <div class="segmentado" role="group" aria-label="Visualização">
+            @foreach (var (v, rotulo) in Vistas)
+            {
+                var vista = v;
+                <button type="button" aria-pressed="@((_vista == vista) ? "true" : "false")" @onclick="() => MudarVista(vista)">@rotulo</button>
+            }
+        </div>
+
+        <div class="linha entre">
+            <button class="botao pequeno" aria-label="Período anterior" disabled="@(InicioVista <= _escala.Inicio)" @onclick="() => Andar(-1)"><Icone Nome="esquerda" Tamanho="20" /></button>
+            <strong style="font-family: var(--fonte-titulo); font-weight: 600;">@Formatos.Dia(Dias[0]) – @Formatos.Dia(Dias[^1])</strong>
+            <div class="linha">
+                @if (Filtrando)
+                {
+                    <button class="botao texto pequeno" @onclick="LimparFiltros">Limpar filtro</button>
+                }
+                <button class="botao pequeno" aria-label="Próximo período" disabled="@(Dias[^1] >= _escala.Fim)" @onclick="() => Andar(1)"><Icone Nome="direita" Tamanho="20" /></button>
+            </div>
         </div>
     </div>
 
-    <div class="segmentado" role="group" aria-label="Visualização">
-        @foreach (var (v, rotulo) in Vistas)
-        {
-            var vista = v;
-            <button type="button" aria-pressed="@((_vista == vista) ? "true" : "false")" @onclick="() => MudarVista(vista)">@rotulo</button>
-        }
-    </div>
+    <GradeEscala Dados="Dados" Escala="_escala" Dias="Dias" Pessoas="Pessoas" Violacoes="_violacoes"
+                 Selecionada="@(_pessoa is null ? null : (_pessoa.Id, _dia))" AoSelecionar="Selecionar" />
 
-    <div class="linha entre">
-        <button class="botao pequeno" aria-label="Período anterior" disabled="@(InicioVista <= _escala.Inicio)" @onclick="() => Andar(-1)"><Icone Nome="esquerda" Tamanho="20" /></button>
-        <strong style="font-family: var(--fonte-titulo); font-weight: 500;">@Formatos.Dia(Dias[0]) – @Formatos.Dia(Dias[^1])</strong>
-        <button class="botao pequeno" aria-label="Próximo período" disabled="@(Dias[^1] >= _escala.Fim)" @onclick="() => Andar(1)"><Icone Nome="direita" Tamanho="20" /></button>
-    </div>
-
-    @if (Setores.Count > 1 || Dados.Funcoes.Count > 0)
-    {
-        <div class="grade-2">
-            @if (Setores.Count > 1)
-            {
-                <label class="campo">Setor
-                    <select @bind="_setor">
-                        <option value="">Todos</option>
-                        @foreach (var s in Setores)
-                        {
-                            <option value="@s">@s</option>
-                        }
-                    </select>
-                </label>
-            }
-            @if (Dados.Funcoes.Count > 0)
-            {
-                <label class="campo">Função
-                    <select @bind="_funcao">
-                        <option value="">Todas</option>
-                        @foreach (var f in Dados.Funcoes)
-                        {
-                            <option value="@f.Id">@f.Nome</option>
-                        }
-                    </select>
-                </label>
-            }
-        </div>
-    }
-
+    @* chave de leitura da grade: vem depois dela, como a legenda de uma tabela *@
     <div class="legenda" aria-label="Legenda">
         @foreach (var t in Dados.Turnos)
         {
@@ -96,9 +63,6 @@ else
         <span class="chip cel-folga">F = Folga</span>
         <span class="chip cel-ausencia">A = Ausência</span>
     </div>
-
-    <GradeEscala Dados="Dados" Escala="_escala" Dias="Dias" Pessoas="Pessoas" Violacoes="_violacoes"
-                 Selecionada="@(_pessoa is null ? null : (_pessoa.Id, _dia))" AoSelecionar="Selecionar" />
 
     <section class="pilha" aria-labelledby="avisos-titulo">
         <div class="secao">
@@ -141,6 +105,43 @@ else
     @if (_escala is not null)
     {
         <div class="pilha">
+            @if (Dados.Escalas.Count > 1)
+            {
+                <label class="campo">Escala aberta
+                    <select value="@_escala.Id" @onchange="TrocarEscala">
+                        @foreach (var e in Dados.Escalas.OrderByDescending(e => e.Inicio))
+                        {
+                            <option value="@e.Id">@Formatos.Periodo(e) · @Formatos.Estado(e, null)</option>
+                        }
+                    </select>
+                </label>
+            }
+            @if (Setores.Count > 1)
+            {
+                <label class="campo">Mostrar só o setor
+                    <select @bind="_setor">
+                        <option value="">Todos</option>
+                        @foreach (var s in Setores)
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    </select>
+                </label>
+            }
+            @if (Dados.Funcoes.Count > 0)
+            {
+                <label class="campo">Mostrar só a função
+                    <select @bind="_funcao">
+                        <option value="">Todas</option>
+                        @foreach (var f in Dados.Funcoes)
+                        {
+                            <option value="@f.Id">@f.Nome</option>
+                        }
+                    </select>
+                </label>
+            }
+            <hr class="divisor" />
+            <button class="botao" @onclick="() => { _mais = false; _gerar = true; }"><Icone Nome="mais-um" Tamanho="18" /> Nova escala</button>
             <a class="botao" href="@($"exportar?id={_escala.Id}")"><Icone Nome="planilha" Tamanho="18" /> Exportar planilhas</a>
             <a class="botao" href="@($"historico?id={_escala.Id}")"><Icone Nome="historico" Tamanho="18" /> Histórico de versões</a>
             @if (!_escala.Encerrada)
@@ -178,6 +179,13 @@ else
     Funcionario? _pessoa;
     DateOnly _dia;
     string _setor = "", _funcao = "";
+
+    /// Os filtros vivem na folha "Opções": sem esse aviso, a grade fica com gente faltando
+    /// e nada na tela explica por quê.
+    bool Filtrando => _setor != "" || _funcao != "";
+
+    void LimparFiltros() => (_setor, _funcao) = ("", "");
+
     int _limite = 20;
     Guid? _validada;
 

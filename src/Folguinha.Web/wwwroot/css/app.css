@@ -262,6 +262,8 @@ legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 .cobertura td { font-size: .6875rem; font-weight: 700; color: var(--verde-tinta); }
 .cobertura td.falta { color: var(--rosa-tinta); }
 .legenda { display: flex; gap: .375rem; flex-wrap: wrap; }
+/* segmentado e paginador são um grupo só — os dois recortam o mesmo tempo */
+.controles-periodo { display: flex; flex-direction: column; gap: .5rem; }
 
 .calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
 .calendario .dow { text-align: center; font-size: .6875rem; font-weight: 600; color: var(--tinta-2); }
