@@ -23,8 +23,14 @@
     readonly string _idTitulo = $"folha-{Guid.NewGuid():N}";
     ElementReference _elemento;
     bool _focar;
+    bool _abertaAntes;
 
-    protected override void OnParametersSet() => _focar = Aberta;
+    // só ao abrir: rearmar a cada render roubaria o foco do campo sendo digitado
+    protected override void OnParametersSet()
+    {
+        _focar = Aberta && !_abertaAntes;
+        _abertaAntes = Aberta;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
