@@ -28,9 +28,19 @@
                                     </button>
                                 </div>
                             }
-                            <button type="button" class="botao texto pequeno" style="align-self: flex-start;" @onclick="() => Adicionar(dia)">
-                                <Icone Nome="mais-um" Tamanho="16" /> @(periodos.Count == 0 ? "Abrir neste dia" : "Outro período")
-                            </button>
+                            <div class="linha" style="align-self: flex-start;">
+                                <button type="button" class="botao texto pequeno" @onclick="() => Adicionar(dia)">
+                                    <Icone Nome="mais-um" Tamanho="16" /> @(periodos.Count == 0 ? "Abrir neste dia" : "Outro período")
+                                </button>
+                                @if (periodos.Count > 0)
+                                {
+                                    <button type="button" class="botao texto pequeno"
+                                            aria-label="@($"Replicar horário de {Formatos.DiaSemana(dia)} para todos os dias")"
+                                            @onclick="() => Replicar(dia)">
+                                        <Icone Nome="trocar" Tamanho="16" /> Replicar p/ todos
+                                    </button>
+                                }
+                            </div>
                         </div>
                     </div>
                 </li>
@@ -84,6 +94,12 @@
     {
         var ultimo = _periodos.LastOrDefault(p => p.Dia == dia);
         _periodos.Add(ultimo is null ? new(dia, new(8, 0), new(18, 0)) : new(dia, ultimo.Fecha.AddHours(1), ultimo.Fecha.AddHours(4)));
+    }
+
+    void Replicar(DayOfWeek dia)
+    {
+        var modelo = _periodos.Where(p => p.Dia == dia).ToList();
+        _periodos = [.. Formatos.Semana.SelectMany(d => modelo.Select(p => p with { Dia = d }))];
     }
 
     void Mudar(PeriodoFuncionamento p, object? valor, bool abertura)
