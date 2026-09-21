@@ -7,7 +7,7 @@
     {
         @if (Bloqueios.Count > 0)
         {
-            <p class="nota erro"><Icone Nome="alerta" Tamanho="18" /> <span>Resolva @Bloqueios.Count bloqueio(s) antes de publicar. Eles quebram regras obrigatórias.</span></p>
+            <p class="nota erro"><Icone Nome="alerta" Tamanho="18" /> <span>Resolva @Formatos.Plural(Bloqueios.Count, "bloqueio", "bloqueios") antes de publicar. Eles quebram regras obrigatórias.</span></p>
             @foreach (var v in Bloqueios.Take(5))
             {
                 <AvisoRegra Violacao="v" />
@@ -84,7 +84,7 @@
                 _justificativas.Clear();
                 await AoPublicar.InvokeAsync();
             }
-            else Loja.Avisar($"Ainda há {r.Pendencias.Count} pendência(s) para publicar.", erro: true);
+            else Loja.Avisar($"Ainda há {Formatos.Plural(r.Pendencias.Count, "pendência", "pendências")} para publicar.", erro: true);
         }
         catch (EscalaException e)
         {

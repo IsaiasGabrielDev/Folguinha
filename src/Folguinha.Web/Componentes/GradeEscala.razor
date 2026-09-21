@@ -1,6 +1,7 @@
 @using Folguinha.Domain.Regras
 @* Grade funcionário × dia com linha de cobertura. *@
-<div class="grade-escala" role="region" aria-label="Grade da escala" tabindex="0">
+@* na semana as 7 colunas têm que caber sem gesto horizontal: o CSS aperta só nesse caso *@
+<div class="grade-escala @(Dias.Count <= 7 ? "semana" : "")" role="region" aria-label="Grade da escala" tabindex="0">
     <table>
         <caption class="sr-only">Escala de @Formatos.Dia(Dias[0]) a @Formatos.Dia(Dias[^1]). Toque num dia para ajustar.</caption>
         <thead>

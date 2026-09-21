@@ -16,7 +16,7 @@ else
     <Cabecalho Titulo="@Formatos.Periodo(_escala)" Subtitulo="Escala">
         <Acoes>
             <div class="linha">
-                <span class="chip @Formatos.ClasseEstado(_escala)">@Formatos.Estado(_escala, _validando ? null : Bloqueios == 0)</span>
+                <span class="chip @Formatos.ClasseEstado(_escala, _validando ? null : Pendencias)">@Formatos.Estado(_escala, _validando ? null : Pendencias)</span>
                 @if (_escala.Rascunho is not null && !_escala.Encerrada)
                 {
                     <button class="botao primario pequeno" disabled="@_validando" @onclick="() => _publicar = true">Publicar</button>
@@ -101,6 +101,21 @@ else
 <FolhaGerar Aberta="_gerar" AoFechar="() => _gerar = false" AoGerar="AoGerar" />
 <FolhaPublicar Aberta="_publicar" Escala="_escala" Violacoes="_violacoes" AoFechar="() => _publicar = false" AoPublicar="AoPublicar" />
 
+<Folha Aberta="_confirmarEncerrar" Titulo="Encerrar a escala?" AoFechar="() => _confirmarEncerrar = false">
+    @if (_escala is not null)
+    {
+        <p>
+            <strong>@Formatos.Periodo(_escala)</strong> para de aceitar ajustes, e isso não pode ser desfeito.
+            A escala continua exportável e o histórico de versões continua no lugar.
+        </p>
+        <div class="acoes">
+            <button class="botao" @onclick="() => _confirmarEncerrar = false">Cancelar</button>
+            <a class="botao" href="@($"exportar?id={_escala.Id}")"><Icone Nome="planilha" Tamanho="18" /> Exportar antes</a>
+            <button class="botao primario perigo" @onclick="Encerrar">Encerrar</button>
+        </div>
+    }
+</Folha>
+
 <Folha Aberta="_mais" Titulo="Opções da escala" AoFechar="() => _mais = false">
     @if (_escala is not null)
     {
@@ -153,7 +168,7 @@ else
                 }
                 else if (_escala.Versoes.Count > 0)
                 {
-                    <button class="botao" @onclick="Encerrar"><Icone Nome="cadeado" Tamanho="18" /> Encerrar escala</button>
+                    <button class="botao perigo" @onclick="() => { _mais = false; _confirmarEncerrar = true; }"><Icone Nome="cadeado" Tamanho="18" /> Encerrar escala</button>
                     <p class="ajuda pequeno">Encerrada, a escala não aceita mais ajustes.</p>
                 }
             }
@@ -175,7 +190,7 @@ else
     Vista _vista = Vista.Semana;
     DateOnly _inicioVista;
     IReadOnlyList<Violacao> _violacoes = [];
-    bool _validando, _gerar, _publicar, _mais;
+    bool _validando, _gerar, _publicar, _mais, _confirmarEncerrar;
     Funcionario? _pessoa;
     DateOnly _dia;
     string _setor = "", _funcao = "";
@@ -211,8 +226,11 @@ else
 
     int Bloqueios => _violacoes.Count(v => v.Severidade == Severidade.Bloqueio);
 
+    /// tudo acima de Informativo: é o que o chip de estado tem que confessar
+    int Pendencias => _violacoes.Count(v => v.Severidade != Severidade.Informativo);
+
     string Resumo => _violacoes.Count == 0 ? "" : string.Join(" · ", _violacoes.GroupBy(v => v.Severidade).OrderBy(g => g.Key)
-        .Select(g => $"{g.Count()} {Formatos.Severidade(g.Key).ToLowerInvariant()}"));
+        .Select(g => Formatos.Severidades(g.Count(), g.Key)));
 
     protected override async Task OnParametersSetAsync()
     {
@@ -329,7 +347,7 @@ else
     async Task Encerrar()
     {
         if (_escala is null) return;
-        _mais = false;
+        _confirmarEncerrar = false;
         if (await Loja.Alterar(d => Escalas.Encerrar(d, _escala.Id), "Escala encerrada.")) await Validar();
     }
 }

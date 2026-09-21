@@ -335,7 +335,7 @@
     {
         if (string.IsNullOrWhiteSpace(_f.Nome)) return;
         var novo = Montar();
-        if (await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios.Where(x => x.Id != novo.Id), novo] }, $"{novo.Nome} salvo(a)."))
+        if (await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios.Where(x => x.Id != novo.Id), novo] }, $"Dados de {novo.Nome} salvos."))
         {
             _comoAbriu = System.Text.Json.JsonSerializer.Serialize(_f); // salvo: a guarda de saída não pergunta nada
             Nav.NavigateTo(Volta);
@@ -370,7 +370,7 @@
         _duplicando = false;
         // copia o que está na tela, inclusive o que ainda não foi salvo; matrícula é de cada pessoa
         var copia = Montar() with { Id = Guid.NewGuid(), Nome = _nomeDaCopia.Trim(), Matricula = null };
-        if (await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios, copia] }, $"{copia.Nome} criado(a) a partir de {_f.Nome}."))
+        if (await Loja.Alterar(d => d with { Funcionarios = [.. d.Funcionarios, copia] }, $"Cópia de {_f.Nome} criada como {copia.Nome}."))
             Nav.NavigateTo($"equipe/{copia.Id}");
     }
 

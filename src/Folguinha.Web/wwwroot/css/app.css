@@ -9,9 +9,9 @@
     --linha: #E9E1D6;
     --tinta: #2B2622;
     --tinta-2: #62594F;
-    --tinta-3: #7C7268;
+    --tinta-3: #736960;
     --coral: #E4704F;
-    --coral-forte: #B84E2E;
+    --coral-forte: #B04A2C;
     --coral-suave: #FCE9E2;
     --coral-tinta: #9E3E22;
     --verde: #1F9E86;
@@ -128,12 +128,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .cresce { flex: 1 1 auto; min-width: 0; }
 .grade-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
 .grade-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
-@media (max-width: 480px) { .grade-2.responsiva { grid-template-columns: 1fr; } }
+@media (max-width: 480px) {
+    .grade-2.responsiva { grid-template-columns: 1fr; }
+    /* tres campos de horario em 390px cortavam o proprio valor ("08:0", "16:2(") */
+    .grade-3 { grid-template-columns: 1fr; }
+}
 .divisor { height: 1px; background: var(--linha); border: 0; margin: 0; width: 100%; }
 .lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .lista > li + li { border-top: 1px solid var(--linha); }
 .item { display: flex; align-items: center; gap: .75rem; padding: .75rem 0; min-height: 52px; }
-.item a.cobre { color: inherit; text-decoration: none; }
+.item.cobre, .item a.cobre { color: inherit; text-decoration: none; }
 .item .nome { font-weight: 700; }
 .item .detalhe { color: var(--tinta-2); font-size: .8125rem; }
 
@@ -205,14 +209,16 @@ legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 .nota.erro { background: var(--rosa-suave); color: var(--rosa-tinta); }
 .nota.ok { background: var(--verde-suave); color: var(--verde-tinta); }
 .toast {
-    position: fixed; left: 50%; transform: translateX(-50%); z-index: 50;
+    /* abaixo da folha (41) e do fundo (40): confirmar algo nao pode tapar o dialogo */
+    position: fixed; left: 50%; transform: translateX(-50%); z-index: 35;
     bottom: calc(var(--barra) + env(safe-area-inset-bottom) + .75rem);
     width: max-content; max-width: min(28rem, calc(100% - 2rem)); padding: .75rem 1rem; border-radius: var(--raio);
     background: var(--tinta); color: #fff; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2);
     display: flex; gap: .75rem; align-items: center;
 }
+.app.sem-barra .toast { bottom: calc(env(safe-area-inset-bottom) + .75rem); }
 .toast.erro { background: var(--rosa-tinta); }
-.toast button { background: transparent; border: 0; color: #fff; text-decoration: underline; cursor: pointer; min-height: 32px; }
+.toast button { background: transparent; border: 0; color: #fff; text-decoration: underline; cursor: pointer; min-height: 44px; padding: 0 .5rem; }
 
 .vazio { text-align: center; padding: 2rem 1rem; display: flex; flex-direction: column; align-items: center; gap: .5rem; color: var(--tinta-2); }
 .vazio .icone-grande { width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--coral-suave); color: var(--coral-tinta); display: grid; place-items: center; margin-bottom: .25rem; }
@@ -250,6 +256,13 @@ legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 .grade-escala thead th.feriado { background: var(--coral-suave); }
 .grade-escala thead th.feriado, .grade-escala thead th.feriado strong { color: var(--coral-tinta); }
 .grade-escala .pessoa { position: sticky; left: 0; z-index: 1; background: var(--bg); text-align: left; min-width: 7rem; padding-right: .25rem; }
+/* 7 dias tem que caber em 390px: 7rem de nome + 7x2.75rem dao 448px numa caixa de 358px,
+   e a coluna que sobrava de fora era justamente a do domingo, que e a regra de manchete. */
+@media (max-width: 480px) {
+    .grade-escala.semana .pessoa { min-width: 5rem; }
+    .grade-escala.semana thead th { min-width: 0; }
+    .grade-escala.semana .celula { min-width: 0; }
+}
 .grade-escala .pessoa a { display: flex; align-items: center; gap: .375rem; color: inherit; text-decoration: none; min-height: 44px; }
 .grade-escala .pessoa .horas { display: block; font-size: .6875rem; color: var(--tinta-2); font-weight: 500; }
 .celula {

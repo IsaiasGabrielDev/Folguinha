@@ -3,7 +3,7 @@
 
 <PageTitle>Equipe · Folguinha</PageTitle>
 
-<Cabecalho Titulo="Equipe" Subtitulo="@($"{Dados.Funcionarios.Count} pessoas")">
+<Cabecalho Titulo="Equipe" Subtitulo="@(Formatos.Plural(Dados.Funcionarios.Count, "pessoa", "pessoas"))">
     <Acoes>
         <a class="botao primario pequeno" href="equipe/novo"><Icone Nome="mais-um" Tamanho="18" Traco="2.2" /> Adicionar</a>
     </Acoes>
@@ -26,7 +26,7 @@ else
     {
         <p class="nota alerta">
             <Icone Nome="info" Tamanho="18" />
-            <span>@SemSituacao.Count pessoa(s) sem a data da última folga. Informe para a primeira escala respeitar os dias já trabalhados.</span>
+            <span>@Formatos.Plural(SemSituacao.Count, "pessoa", "pessoas") sem a data da última folga. Informe para a primeira escala respeitar os dias já trabalhados.</span>
         </p>
     }
 

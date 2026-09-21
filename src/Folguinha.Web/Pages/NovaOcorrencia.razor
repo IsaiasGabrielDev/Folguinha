@@ -159,7 +159,7 @@
         }
         @if (_pendencias.Count > 0)
         {
-            <p class="nota erro" role="alert">A ocorrência foi registrada, mas a nova versão não foi publicada: @_pendencias.Count pendência(s). Resolva na tela da escala e publique.</p>
+            <p class="nota erro" role="alert">A ocorrência foi registrada, mas a nova versão não foi publicada: @Formatos.Plural(_pendencias.Count, "pendência", "pendências"). Resolva na tela da escala e publique.</p>
             <a class="botao primario" href="escala">Abrir escala</a>
         }
         else

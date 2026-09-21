@@ -197,7 +197,7 @@
             var bloqueios = violacoes.Count(v => v.Severidade == Domain.Regras.Severidade.Bloqueio);
             await Loja.Substituir(novos, bloqueios == 0
                 ? "Rascunho gerado. Revise os avisos e publique."
-                : $"Rascunho gerado com {bloqueios} bloqueio(s) para resolver.");
+                : $"Rascunho gerado com {Formatos.Plural(bloqueios, "bloqueio", "bloqueios")} para resolver.");
             _ultimas.Clear();
             await AoGerar.InvokeAsync(escala);
         }

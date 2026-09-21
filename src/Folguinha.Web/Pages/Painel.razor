@@ -20,7 +20,7 @@
 else
 {
     <div class="linha">
-        <a class="chip @Formatos.ClasseEstado(_escala)" href="@($"escala?id={_escala.Id}")">@Formatos.Periodo(_escala) · @Formatos.Estado(_escala, _validando ? null : Bloqueios == 0)</a>
+        <a class="chip @Formatos.ClasseEstado(_escala, _validando ? null : Importantes.Count)" href="@($"escala?id={_escala.Id}")">@Formatos.Periodo(_escala) · @Formatos.Estado(_escala, _validando ? null : Importantes.Count)</a>
         @if (PessoasSemSituacao > 0)
         {
             <a class="chip sev-atencao" href="equipe">@PessoasSemSituacao sem última folga</a>
@@ -52,7 +52,7 @@ else
     <section class="pilha" aria-labelledby="atencao-titulo">
         <div class="secao">
             <h2 id="atencao-titulo">Precisa de atenção</h2>
-            <span class="contagem" role="status">@(_validando ? "verificando…" : $"{Importantes.Count} aviso(s)")</span>
+            <span class="contagem" role="status">@(_validando ? "verificando…" : Formatos.Plural(Importantes.Count, "aviso", "avisos"))</span>
         </div>
         @if (!_validando && Importantes.Count == 0)
         {

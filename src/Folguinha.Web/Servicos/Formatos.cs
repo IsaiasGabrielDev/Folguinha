@@ -113,6 +113,15 @@ public static class Formatos
         _ => "Informativo",
     };
 
+    /// "5 crítico" era o que saía do resumo de avisos.
+    public static string Severidades(int n, Severidade s) => Plural(n, Severidade(s).ToLowerInvariant(), s switch
+    {
+        Domain.Regras.Severidade.Bloqueio => "bloqueios",
+        Domain.Regras.Severidade.Critico => "críticos",
+        Domain.Regras.Severidade.Atencao => "atenções",
+        _ => "informativos",
+    });
+
     public static string ClasseSeveridade(Severidade s) => s switch
     {
         Domain.Regras.Severidade.Bloqueio => "sev-bloqueio",
@@ -121,15 +130,22 @@ public static class Formatos
         _ => "sev-info",
     };
 
-    /// semBloqueio null = ainda não se sabe (validação rodando, ou lista que não valida nada).
-    /// "Validado" é a palavra com peso jurídico do app: só sai depois que as regras rodaram.
-    public static string Estado(Escala e, bool? semBloqueio) => e.Estado switch
+    /// Plural do português, para o app parar de escrever "1 funções" e "5 aviso(s)".
+    public static string Plural(int n, string singular, string plural) => $"{n} {(n == 1 ? singular : plural)}";
+
+    /// `pendencias` = quantas violações acima de Informativo sobraram. null = ainda não se sabe
+    /// (validação rodando, ou lista que não validou nada).
+    ///
+    /// "Validado" é a palavra com peso jurídico deste app, então ela exige passagem limpa: não
+    /// basta não ter Bloqueio. Antes o rótulo vinha de `Bloqueios == 0`, e a tela chegava a
+    /// dizer "Rascunho validado" quatro linhas acima de "Avisos · 5 crítico".
+    public static string Estado(Escala e, int? pendencias) => e.Estado switch
     {
-        EstadoEscala.Rascunho => semBloqueio switch
+        EstadoEscala.Rascunho => pendencias switch
         {
             null => "Rascunho · verificando…",
-            true => "Rascunho validado",
-            false => "Rascunho",
+            0 => "Rascunho validado",
+            int n => $"Rascunho · {Plural(n, "ponto a revisar", "pontos a revisar")}",
         },
         EstadoEscala.EmValidacao => "Alterações não publicadas",
         EstadoEscala.Publicada => $"Publicada · v{e.Versoes.Count}",
@@ -138,9 +154,12 @@ public static class Formatos
         _ => e.Estado.ToString(),
     };
 
-    public static string ClasseEstado(Escala e) => e.Estado switch
+    /// Verde só quando o rótulo diz "validado" — o chip âmbar sob essa palavra dizia
+    /// cautela e tranquilidade ao mesmo tempo.
+    public static string ClasseEstado(Escala e, int? pendencias = null) => e.Estado switch
     {
-        EstadoEscala.Rascunho or EstadoEscala.EmValidacao => "chip-ambar",
+        EstadoEscala.Rascunho => pendencias == 0 ? "chip-verde" : "chip-ambar",
+        EstadoEscala.EmValidacao => "chip-ambar",
         EstadoEscala.Encerrada => "chip-neutro",
         _ => "chip-verde",
     };

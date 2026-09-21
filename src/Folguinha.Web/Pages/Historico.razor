@@ -24,7 +24,7 @@
 {
     @if (escala.Rascunho is not null && escala.Versoes.Count > 0)
     {
-        <p class="nota alerta"><Icone Nome="info" Tamanho="18" /><span>Há @Escalas.Diferencas(escala.UltimaVersao!.Alocacoes, escala.Rascunho).Count alteração(ões) ainda não publicada(s).</span></p>
+        <p class="nota alerta"><Icone Nome="info" Tamanho="18" /><span>Há @Formatos.Plural(Escalas.Diferencas(escala.UltimaVersao!.Alocacoes, escala.Rascunho).Count, "alteração ainda não publicada", "alterações ainda não publicadas").</span></p>
     }
     @if (escala.Versoes.Count == 0)
     {

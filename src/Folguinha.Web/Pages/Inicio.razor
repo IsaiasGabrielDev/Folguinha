@@ -141,9 +141,9 @@
     [
         (Dados.Empresa is not null, "Empresa cadastrada", Link(1)),
         (Dados.Funcionamento.Count > 0, "Horário de funcionamento", Link(2)),
-        (Dados.Turnos.Count > 0, $"{Dados.Turnos.Count} turno(s)", Link(3)),
+        (Dados.Turnos.Count > 0, Formatos.Plural(Dados.Turnos.Count, "turno", "turnos"), Link(3)),
         (Dados.Feriados.Count > 0, $"{Dados.Feriados.Count(f => f.Considerado)} feriado(s) considerados", Link(4)),
-        (Dados.Funcionarios.Count > 0, $"{Dados.Funcionarios.Count} pessoa(s) na equipe", Link(5)),
+        (Dados.Funcionarios.Count > 0, $"{Formatos.Plural(Dados.Funcionarios.Count, "pessoa", "pessoas")} na equipe", Link(5)),
         (Dados.Funcionarios.All(f => f.Situacao is not null), "Última folga de todos informada", Link(5)),
         (Dados.Demandas.Any(d => !d.EhFaixa), "Pessoas por turno definidas", Link(6)),
         (Dados.Demandas.Any(d => d.EhFaixa), "Horários de mais fluxo informados", Link(6)),
