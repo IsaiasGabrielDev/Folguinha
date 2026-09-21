@@ -319,8 +319,11 @@ sealed class Execucao
                 .SelectMany(t => trabalhadores.Select(f => (f, t, aloc: Tentar(f, dia, t, vaga.FuncaoId))))
                 .Where(x => x.aloc is not null)
                 .OrderBy(x => Preferido(x.f, dia, x.t) ? 0 : 1)
-                .ThenBy(x => vaga.FuncaoId is null && x.f.Funcoes is { Count: > 0 } ? 1 : 0) // guarda especialistas
+                // o turno principal vem antes de guardar especialista: ele é lotação, não
+                // otimização. Na ordem inversa, dar uma função a alguém tirava a pessoa do
+                // turno dela — quem era da manhã ia parar na tarde e vice-versa.
                 .ThenBy(x => e.RodizioTurnos || x.f.TurnoPrincipal is null || x.f.TurnoPrincipal == x.t.Id ? 0 : 1)
+                .ThenBy(x => vaga.FuncaoId is null && x.f.Funcoes is { Count: > 0 } ? 1 : 0) // guarda especialistas
                 // o turno de ontem vem antes do rodízio: a pessoa troca de turno na virada da semana,
                 // depois da folga, e não de um dia para o outro
                 .ThenBy(x => TurnoDeOntem(x.f, dia) is { } ontem && ontem != x.t.Id ? 1 : 0)
