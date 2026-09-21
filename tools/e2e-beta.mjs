@@ -19,7 +19,7 @@ export default async function ({ avaliar, texto, esperarTexto, clicar, preencher
     await foto('01-boas-vindas');
     await preencher('Entendi', true);
     await clicar('Explorar com uma loja de exemplo');
-    await esperarTexto('Tudo pronto');
+    await esperarTexto('Gerar a primeira escala');
     await foto('02-tudo-pronto');
 
     passo('gerar a primeira escala');

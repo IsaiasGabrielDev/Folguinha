@@ -3,6 +3,7 @@
    não parecer um marcador de hábitos numa tela que fala de CLT.
    Cores de texto e botões ajustadas para contraste AA sobre o fundo creme. */
 :root {
+    color-scheme: light;
     --bg: #FBF7F2;
     --superficie: #FFFFFF;
     --superficie-2: #F4EEE6;
@@ -160,7 +161,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .botao.primario.perigo { background: var(--rosa-tinta); border-color: var(--rosa-tinta); color: #fff; box-shadow: 0 6px 16px rgba(166, 43, 60, .25); }
 .botao.primario.perigo:hover { background: #8D2232; color: #fff; }
 .botao.texto { border-color: transparent; background: transparent; color: var(--coral-tinta); padding: 0 .5rem; }
-.botao.pequeno { min-height: 40px; font-size: .875rem; padding: 0 .75rem; }
+.botao.pequeno { min-height: 44px; font-size: .875rem; padding: 0 .75rem; }
 .botao.cheio { width: 100%; }
 .botao[disabled] { opacity: .5; cursor: not-allowed; box-shadow: none; }
 .acoes { display: flex; gap: .625rem; flex-wrap: wrap; }
@@ -197,8 +198,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; }
 legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 .segmentado { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: .25rem; padding: .25rem; border-radius: var(--raio); background: var(--superficie-2); }
-.segmentado button { min-height: 40px; border: 0; border-radius: 12px; background: transparent; font-weight: 600; color: var(--tinta-2); cursor: pointer; }
+.segmentado button { min-height: 44px; border: 0; border-radius: 12px; background: transparent; font-weight: 600; color: var(--tinta-2); cursor: pointer; }
 .segmentado button[aria-pressed=true] { background: var(--superficie); color: var(--tinta); font-weight: 700; box-shadow: 0 1px 3px rgba(60,40,20,.1); }
+/* multipla escolha nao e "aba atual": marcado precisa ler como ligado, nao como selecionado */
+.segmentado.multipla button { border: 1.5px solid transparent; }
+.segmentado.multipla button[aria-pressed=true] { background: var(--coral-suave); color: var(--coral-tinta); border-color: var(--coral); box-shadow: none; }
 
 /* ---------- avisos ---------- */
 .aviso { display: flex; flex-direction: column; gap: .375rem; padding: .875rem 1rem; border-radius: var(--raio-grande); background: var(--superficie); box-shadow: var(--sombra); }
@@ -280,9 +284,9 @@ legend { font-weight: 700; margin-bottom: .25rem; padding: 0; }
 
 .calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
 .calendario .dow { text-align: center; font-size: .6875rem; font-weight: 600; color: var(--tinta-2); }
-.calendario .dia { min-height: 2.5rem; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+.calendario .dia { min-height: 2.75rem; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
 .calendario .dia strong { font-size: .8125rem; }
-.calendario .dia span { font-size: .5625rem; font-weight: 600; }
+.calendario .dia span { font-size: .6875rem; font-weight: 600; }
 .calendario .dia.feriado { outline: 2px solid var(--coral); outline-offset: -2px; }
 
 .dias-cobertura { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .375rem; }

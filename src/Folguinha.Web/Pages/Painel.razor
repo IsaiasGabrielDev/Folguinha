@@ -58,6 +58,10 @@ else
         {
             <p class="nota ok"><Icone Nome="ok" Tamanho="18" /> Tudo certo com a escala.</p>
         }
+        @if (!_validando && Justificados > 0)
+        {
+            <p class="nota"><Icone Nome="ok" Tamanho="18" /><span>@Formatos.Plural(Justificados, "alerta já justificado", "alertas já justificados") na publicação. Ficam no relatório de validação.</span></p>
+        }
         @foreach (var v in Importantes.Take(4))
         {
             <AvisoRegra Violacao="v">
@@ -118,7 +122,17 @@ else
 
     int Bloqueios => _violacoes.Count(v => v.Severidade == Severidade.Bloqueio);
 
-    List<Violacao> Importantes => [.. _violacoes.Where(v => v.Severidade != Severidade.Informativo)];
+    /// "Precisa de atenção" é o que ainda não foi revisado. O que o gestor justificou ao
+    /// publicar sai daqui: reapresentar aquilo como problema cru era parabenizá-lo pela
+    /// publicação e, na tela seguinte, dizer que ele falhou.
+    List<Violacao> Importantes => [.. _violacoes
+        .Where(v => v.Severidade != Severidade.Informativo)
+        .Where(v => !_justificados.Contains(Escalas.Chave(v)))
+        .OrderBy(v => v.Severidade).ThenBy(v => v.Data)];
+
+    int Justificados => _violacoes.Count(v => v.Severidade != Severidade.Informativo && _justificados.Contains(Escalas.Chave(v)));
+
+    HashSet<string> _justificados = [];
 
     List<Alocacao> Hoje => [.. (_escala?.Atual ?? []).Where(a => a.Data == Loja.Hoje && a.Trabalha).OrderBy(a => a.Inicio)];
 
@@ -136,6 +150,7 @@ else
         StateHasChanged();
         await Respirar();
         _violacoes = Escalas.Validar(Dados, _escala);
+        _justificados = Escalas.Justificados(_escala);
         _validando = false;
     }
 

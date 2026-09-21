@@ -166,6 +166,13 @@ public static class Escalas
     /// Identifica um aviso entre validações (para justificativas e comparação).
     public static string Chave(Violacao v) => $"{v.RegraId}|{v.FuncionarioId}|{v.Data:yyyy-MM-dd}|{v.Mensagem}";
 
+    static string Chave(AlertaAceito a) => $"{a.RegraId}|{a.FuncionarioId}|{a.Data:yyyy-MM-dd}|{a.Mensagem}";
+
+    /// Avisos que já foram justificados na última publicação. Sem isso o Painel reapresenta
+    /// como problema cru exatamente o que o gestor acabou de revisar e assinar ao publicar.
+    public static HashSet<string> Justificados(Escala e) =>
+        [.. (e.UltimaVersao?.AlertasAceitos ?? []).Select(Chave)];
+
     public static ResultadoPublicacao Publicar(
         DadosDaUnidade dados, Guid escalaId, string motivo, IReadOnlyDictionary<string, string> justificativas, DateTimeOffset agora)
     {

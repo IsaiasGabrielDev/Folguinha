@@ -17,7 +17,7 @@
 </div>
 
 <header class="pilha" style="gap: .375rem;">
-    <h1>@Titulos[Passo].Titulo</h1>
+    <h1>@Titulo</h1>
     <p class="ajuda">@Titulos[Passo].Texto</p>
 </header>
 
@@ -113,6 +113,14 @@
 
     int Passo => Math.Clamp(PassoPedido ?? 0, 0, Titulos.Length - 1);
 
+    int Faltando => Checklist.Count(x => !x.Ok);
+
+    /// O último passo se chamava "Tudo pronto" mesmo com linhas "Falta" logo abaixo —
+    /// e isso saía até na loja de exemplo, o caminho que todo mundo percorre.
+    string Titulo => Passo == Titulos.Length - 1 && Faltando > 0
+        ? $"Quase lá · {Formatos.Plural(Faltando, "item", "itens")} a completar"
+        : Titulos[Passo].Titulo;
+
     static string Link(int passo) => passo <= 0 ? "inicio" : $"inicio?passo={passo}";
 
     protected override void OnParametersSet()
@@ -142,10 +150,11 @@
         (Dados.Empresa is not null, "Empresa cadastrada", Link(1)),
         (Dados.Funcionamento.Count > 0, "Horário de funcionamento", Link(2)),
         (Dados.Turnos.Count > 0, Formatos.Plural(Dados.Turnos.Count, "turno", "turnos"), Link(3)),
-        (Dados.Feriados.Count > 0, $"{Dados.Feriados.Count(f => f.Considerado)} feriado(s) considerados", Link(4)),
+        (Dados.Feriados.Count > 0, $"{Formatos.Plural(Dados.Feriados.Count(f => f.Considerado), "feriado considerado", "feriados considerados")}", Link(4)),
         (Dados.Funcionarios.Count > 0, $"{Formatos.Plural(Dados.Funcionarios.Count, "pessoa", "pessoas")} na equipe", Link(5)),
         (Dados.Funcionarios.All(f => f.Situacao is not null), "Última folga de todos informada", Link(5)),
-        (Dados.Demandas.Any(d => !d.EhFaixa), "Pessoas por turno definidas", Link(6)),
-        (Dados.Demandas.Any(d => d.EhFaixa), "Horários de mais fluxo informados", Link(6)),
+        // por turno OU por faixa de horário: são duas formas de dizer a mesma coisa e o
+        // gerador aceita qualquer uma. Exigir as duas marcava "Falta" numa loja completa.
+        (Dados.Demandas.Count > 0, "Quantas pessoas a loja precisa (por turno ou por faixa)", Link(6)),
     ];
 }

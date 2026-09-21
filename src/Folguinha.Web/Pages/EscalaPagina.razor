@@ -69,29 +69,41 @@ else
             <h2 id="avisos-titulo">Avisos</h2>
             <span class="contagem" role="status">@(_validando ? "validando…" : Resumo)</span>
         </div>
+        @* o validador fala Bloqueio/Crítico/Atenção e a tela de regras fala
+           Obrigatória/Alerta/Preferência; nada ligava um ao outro *@
+        @if (!_validando && _violacoes.Count > 0)
+        {
+            <p class="ajuda pequeno">Só <strong>Bloqueio</strong> impede publicar. Crítico e Atenção pedem uma justificativa, que fica registrada no relatório de validação.</p>
+        }
         @if (!_validando && _violacoes.Count == 0)
         {
             <p class="nota ok"><Icone Nome="ok" Tamanho="18" /> Nenhum aviso: a escala atende todas as regras.</p>
         }
-        @foreach (var v in _violacoes.Take(_limite))
+        @foreach (var g in Avisos.Take(_limite))
         {
-            var violacao = v;
-            <AvisoRegra Violacao="v">
+            var grupo = g;
+            <AvisoRegra Violacao="g.Primeira">
                 <Acao>
-                    @if (v.FuncionarioId is { } fid && v.Data is { } d && Dados.Funcionario(fid) is { } pessoa)
+                    @if (grupo.Todas.Count == 1 && grupo.Primeira.FuncionarioId is { } fid && grupo.Primeira.Data is { } d && Dados.Funcionario(fid) is { } pessoa)
                     {
                         <button class="botao texto pequeno" @onclick="() => IrPara(pessoa, d)">Ajustar</button>
                     }
-                    else if (v.Data is { } dia)
+                    else if (grupo.Primeira.Data is { } dia)
                     {
                         <button class="botao texto pequeno" @onclick="() => IrParaDia(dia)">Ver dia</button>
                     }
                 </Acao>
+                <ChildContent>
+                    @if (grupo.Todas.Count > 1)
+                    {
+                        <p class="ajuda pequeno">Mesmo caso de @Outros(grupo).</p>
+                    }
+                </ChildContent>
             </AvisoRegra>
         }
-        @if (_violacoes.Count > _limite)
+        @if (Avisos.Count > _limite)
         {
-            <button class="botao" @onclick="() => _limite += 20">Mostrar mais (@(_violacoes.Count - _limite))</button>
+            <button class="botao" @onclick="() => _limite += 20">Mostrar mais (@(Avisos.Count - _limite))</button>
         }
     </section>
 }
@@ -228,6 +240,19 @@ else
 
     /// tudo acima de Informativo: é o que o chip de estado tem que confessar
     int Pendencias => _violacoes.Count(v => v.Severidade != Severidade.Informativo);
+
+    sealed record Grupo(Violacao Primeira, List<Violacao> Todas);
+
+    /// Um cartão por fato, do mais grave para o menos. A ordem crua do validador deixava um
+    /// Bloqueio abaixo de vinte Atenções, e cinco pessoas na escala no mesmo feriado viravam
+    /// cinco cartões com a mesma frase e a mesma sugestão.
+    List<Grupo> Avisos => [.. _violacoes
+        .GroupBy(v => (v.RegraId, v.Data, v.Severidade))
+        .Select(g => new Grupo(g.First(), [.. g]))
+        .OrderBy(g => g.Primeira.Severidade).ThenBy(g => g.Primeira.Data)];
+
+    string Outros(Grupo g) => string.Join(", ", g.Todas.Skip(1)
+        .Select(v => v.FuncionarioId is { } id ? Dados.Funcionario(id)?.Nome ?? "pessoa removida" : "outro dia"));
 
     string Resumo => _violacoes.Count == 0 ? "" : string.Join(" · ", _violacoes.GroupBy(v => v.Severidade).OrderBy(g => g.Key)
         .Select(g => Formatos.Severidades(g.Count(), g.Key)));

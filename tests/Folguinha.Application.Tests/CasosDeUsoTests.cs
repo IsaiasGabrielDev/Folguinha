@@ -51,6 +51,36 @@ public class CasosDeUsoTests
 
     Funcionario Pessoa(string nome) => _dados.Funcionarios.Single(f => f.Nome == nome);
 
+    /// O Painel reapresentava como problema cru exatamente o que o gestor justificou ao
+    /// publicar. A chave tem que casar entre a validação de agora e o alerta gravado na versão.
+    [Fact]
+    public void Alertas_justificados_na_publicacao_sao_reconhecidos_depois()
+    {
+        // equipe curta de propósito: a loja cheia gera escala limpa e o teste passaria à toa
+        var magra = _dados with { Funcionarios = [.. _dados.Funcionarios.Take(4)] };
+        var (gerados, escala0, violacoes) = Escalas.Gerar(magra, Inicio, Fim);
+        var precisavam = violacoes.Where(Escalas.PrecisaJustificativa).ToList();
+        Assert.NotEmpty(precisavam);
+
+        var r = Escalas.Publicar(gerados, escala0.Id, "", JustificarTudo(violacoes), Agora);
+        Assert.True(r.Publicado, string.Join(" · ", r.Pendencias.Select(p => p.Mensagem)));
+        var escala = r.Dados.Escala(escala0.Id)!;
+
+        var justificados = Escalas.Justificados(escala);
+        var revalidadas = Escalas.Validar(r.Dados, escala).Where(Escalas.PrecisaJustificativa).ToList();
+
+        Assert.NotEmpty(revalidadas);
+        Assert.All(revalidadas, v => Assert.Contains(Escalas.Chave(v), justificados));
+    }
+
+    [Fact]
+    public void Escala_sem_publicacao_nao_tem_alerta_justificado()
+    {
+        var (_, escala, _) = Escalas.Gerar(_dados, Inicio, Fim);
+
+        Assert.Empty(Escalas.Justificados(escala));
+    }
+
     // ---------- geração e ciclo de vida ----------
 
     [Fact]
