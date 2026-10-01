@@ -10,6 +10,17 @@ Gerenciador de escalas e folgas conforme a CLT, para o gerente montar, validar, 
 
 **Acesse:** https://isaiasgabrieldev.github.io/Folguinha/
 
+<p>
+  <img src="docs/img/escala.png" alt="Escala da semana: turnos de manhã, tarde e folgas por pessoa, com a cobertura de cada dia" width="74%">
+  <img src="docs/img/escala-celular.png" alt="A mesma escala no celular" width="24%">
+</p>
+
+| Painel | Publicar com alertas | Regras da CLT |
+|---|---|---|
+| ![Painel com cobertura da semana e quem trabalha hoje](docs/img/painel.png) | ![Cada alerta pede uma justificativa antes de publicar](docs/img/alertas.png) | ![Regras com nível e fundamento legal](docs/img/regras.png) |
+
+<sub>Telas da loja de exemplo do próprio app.</sub>
+
 ## Como funciona
 
 ### Para o gerente
