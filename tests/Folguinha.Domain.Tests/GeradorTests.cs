@@ -1,4 +1,4 @@
-﻿using Folguinha.Domain.Geracao;
+using Folguinha.Domain.Geracao;
 using Folguinha.Domain.Regras;
 using static Folguinha.Domain.Tests.Dados;
 
@@ -47,6 +47,38 @@ public class GeradorTests
 
         Assert.DoesNotContain(r.Violacoes, v => v.Severidade is Severidade.Bloqueio or Severidade.Critico);
         Assert.True(r.PodePublicar);
+    }
+
+    [Fact]
+    public void Folga_casada_so_folga_sabado_e_domingo_juntos()
+    {
+        var equipe = Nomes.Select(n => Func(n)).ToArray();
+
+        var r = GeradorEscala.Gerar(Varejo(equipe) with { FolgaCasada = true });
+
+        var folgas = r.Alocacoes.Where(a => !a.Trabalha).Select(a => (a.FuncionarioId, a.Data)).ToHashSet();
+        Assert.All(folgas.Where(x => x.Data.DayOfWeek == DayOfWeek.Sunday && x.Data > D(1)),
+            x => Assert.Contains((x.FuncionarioId, x.Data.AddDays(-1)), folgas));
+        Assert.All(folgas.Where(x => x.Data.DayOfWeek == DayOfWeek.Saturday && x.Data < D(31)),
+            x => Assert.Contains((x.FuncionarioId, x.Data.AddDays(1)), folgas));
+        Assert.Contains(folgas, x => x.Data.DayOfWeek == DayOfWeek.Sunday); // o rodízio de domingos continua
+        Assert.DoesNotContain(r.Violacoes, v => v.Severidade == Severidade.Bloqueio);
+    }
+
+    [Fact]
+    public void Domingo_a_cada_2_semanas_ninguem_trabalha_dois_domingos_seguidos()
+    {
+        var equipe = Nomes.Select(n => Func(n)).ToArray();
+
+        var r = GeradorEscala.Gerar(Varejo(equipe) with { FolgaCasada = true, DomingoACada = 2 });
+
+        bool Trabalhou(Funcionario f, DateOnly d) => r.Alocacoes.Any(a => a.FuncionarioId == f.Id && a.Data == d && a.Trabalha);
+        Assert.All(equipe, f => Assert.DoesNotContain(new[] { D(11), D(18), D(25) }, d => Trabalhou(f, d) && Trabalhou(f, d.AddDays(-7))));
+        // equipe sem histórico de domingos: metade folga um fim de semana, metade o outro — não todos juntos
+        Assert.All(new[] { D(4), D(11), D(18), D(25) }, d => Assert.Equal(4, equipe.Count(f => !Trabalhou(f, d))));
+        // e nunca três folgas seguidas
+        Assert.All(equipe, f => Assert.DoesNotContain(Enumerable.Range(1, 29).Select(i => D(i)),
+            d => !Trabalhou(f, d) && !Trabalhou(f, d.AddDays(1)) && !Trabalhou(f, d.AddDays(2))));
     }
 
     [Fact]
@@ -259,27 +291,27 @@ public class GeradorTests
     public void Quem_trabalha_no_feriado_folga_um_dia_a_mais_na_semana_seguinte()
     {
         // Aparecida cai na segunda 12/10; a semana seguinte vai de 19 a 25/10
-        var bia = Func("Bia");
+        var carla = Func("Carla");
         // trava o feriado como dia de trabalho nas duas gerações: só a compensação muda
-        var noFeriado = Alocacao.Trabalho(bia.Id, D(12), Manha.Inicio, Manha.Fim, Manha.Intervalo, Manha.Id) with { Travada = true };
-        var entrada = Sozinha(bia) with { Travadas = [noFeriado] };
+        var noFeriado = Alocacao.Trabalho(carla.Id, D(12), Manha.Inicio, Manha.Fim, Manha.Intervalo, Manha.Id) with { Travada = true };
+        var entrada = Sozinha(carla) with { Travadas = [noFeriado] };
 
         var com = GeradorEscala.Gerar(entrada with { CompensarFeriado = true });
         var sem = GeradorEscala.Gerar(entrada);
 
-        Assert.Equal(6, DiasTrabalhados(sem, bia, D(19), D(25)));
-        Assert.Equal(5, DiasTrabalhados(com, bia, D(19), D(25)));
+        Assert.Equal(6, DiasTrabalhados(sem, carla, D(19), D(25)));
+        Assert.Equal(5, DiasTrabalhados(com, carla, D(19), D(25)));
     }
 
     [Fact]
     public void Quem_folga_no_feriado_nao_ganha_compensacao()
     {
-        var bia = Func("Bia") with { Situacao = new SituacaoInicial(D(1), TrabalhouUltimoFeriado: false) };
-        var folgaNoFeriado = Alocacao.Folga(bia.Id, D(12)) with { Travada = true };
+        var carla = Func("Carla") with { Situacao = new SituacaoInicial(D(1), TrabalhouUltimoFeriado: false) };
+        var folgaNoFeriado = Alocacao.Folga(carla.Id, D(12)) with { Travada = true };
 
-        var r = GeradorEscala.Gerar(Sozinha(bia) with { CompensarFeriado = true, Travadas = [folgaNoFeriado] });
+        var r = GeradorEscala.Gerar(Sozinha(carla) with { CompensarFeriado = true, Travadas = [folgaNoFeriado] });
 
-        Assert.Equal(6, DiasTrabalhados(r, bia, D(19), D(25)));
+        Assert.Equal(6, DiasTrabalhados(r, carla, D(19), D(25)));
     }
 
     [Fact]

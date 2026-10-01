@@ -51,4 +51,50 @@ public static class Exemplo
             AceitouAviso = true,
         };
     }
+
+    /// Loja de exemplo completa: 6 pessoas 6x1, aberta 7h–23h todo dia.
+    /// 3 de manhã, 2 na tarde até as 22h e 1 até as 23h — por isso das 22h às 23h o mínimo é 1.
+    /// Mínimo de 2 no resto do dia; seg, qua, qui e sáb costumam ter mais movimento (ideal 3).
+    /// Fim de semana de folga sim, outro não (sábado + domingo); nas outras semanas a folga cai de seg a sex.
+    /// A última folga, o último domingo de folga e o último feriado ficam escalonados, como se a escala
+    /// anterior tivesse rodado.
+    public static DadosDaUnidade LojaCompleta(DateOnly inicioDaEscala)
+    {
+        var manha = new Turno(Guid.NewGuid(), "Manhã", new(7, 0), new(15, 20), TimeSpan.FromHours(1));
+        var tarde = new Turno(Guid.NewGuid(), "Tarde", new(13, 40), new(22, 0), TimeSpan.FromHours(1));
+        var noite = new Turno(Guid.NewGuid(), "Tarde até 23h", new(14, 40), new(23, 0), TimeSpan.FromHours(1));
+        var atendimento = new Funcao(Guid.NewGuid(), "Atendimento");
+        Turno[] principal = [manha, manha, manha, tarde, tarde, noite];
+        var ultimoDomingo = inicioDaEscala.AddDays(-1 - ((int)inicioDaEscala.AddDays(-1).DayOfWeek));
+
+        var funcionarios = principal.Select((turno, i) => new Funcionario(Guid.NewGuid(), $"Pessoa {i + 1}", Regime.SeisPorUm, TimeSpan.FromHours(44),
+            // das 22h às 23h a hora noturna é reduzida: 6 dias até as 23h passam de 44h por alguns minutos
+            PermiteHoraExtra: true, LimiteHoraExtraSemanal: TimeSpan.FromHours(2))
+        {
+            Funcoes = [atendimento.Id],
+            TurnoPrincipal = turno.Id,
+            // metade da equipe folgou o último fim de semana, a outra metade folga o próximo
+            Situacao = new SituacaoInicial(inicioDaEscala.AddDays(-1 - i), ultimoDomingo.AddDays(i is 0 or 1 or 3 ? 0 : -7), i % 2 == 0),
+        }).ToList();
+
+        var dias = Enum.GetValues<DayOfWeek>();
+        DayOfWeek[] movimento = [DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Saturday];
+        return new DadosDaUnidade
+        {
+            Empresa = new Empresa(Guid.NewGuid(), "Loja Avenida", RamoAtividade.Comercio),
+            Uf = "SP",
+            FolgaCasada = true,
+            DomingoACada = 2,
+            Funcionarios = funcionarios,
+            Turnos = [manha, tarde, noite],
+            Funcoes = [atendimento],
+            Funcionamento = [.. dias.Select(d => new PeriodoFuncionamento(d, new(7, 0), new(23, 0)))],
+            Demandas =
+            [
+                .. dias.Select(d => new Demanda(null, 2, movimento.Contains(d) ? 3 : 2, DiaSemana: d, Inicio: new(7, 0), Fim: new(22, 0))),
+                .. dias.Select(d => new Demanda(null, 1, 1, DiaSemana: d, Inicio: new(22, 0), Fim: new(23, 0))),
+            ],
+            AceitouAviso = true,
+        };
+    }
 }

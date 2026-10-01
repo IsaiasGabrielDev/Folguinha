@@ -113,9 +113,9 @@ public class FolgaExtraTests
     [Fact]
     public void Folga_extra_a_cada_duas_semanas()
     {
-        var namorada = Func("Bia") with { FolgaExtra = new FolgaExtraPeriodica(ACadaSemanas: 2, APartirDe: D(5)) };
+        var carla = Func("Carla") with { FolgaExtra = new FolgaExtraPeriodica(ACadaSemanas: 2, APartirDe: D(5)) };
 
-        var r = GeradorEscala.Gerar(Mes(namorada));
+        var r = GeradorEscala.Gerar(Mes(carla));
 
         Assert.Equal([5, 6, 5, 6], new[] { D(5), D(12), D(19), D(26) }.Select(s => Dias(r, s)));
         Assert.DoesNotContain(r.Violacoes, v => v.Severidade == Severidade.Bloqueio);
@@ -124,7 +124,7 @@ public class FolgaExtraTests
     [Fact]
     public void Sem_folga_extra_trabalha_6_dias_toda_semana()
     {
-        var r = GeradorEscala.Gerar(Mes(Func("Bia")));
+        var r = GeradorEscala.Gerar(Mes(Func("Carla")));
 
         Assert.Equal([6, 6, 6, 6], new[] { D(5), D(12), D(19), D(26) }.Select(s => Dias(r, s)));
     }
@@ -132,9 +132,9 @@ public class FolgaExtraTests
     [Fact]
     public void Folga_extra_no_fim_de_semana_fica_sabado_e_domingo()
     {
-        var bia = Func("Bia") with { FolgaExtra = new FolgaExtraPeriodica(2, D(5), Posicao: PosicaoFolgaExtra.FimDeSemana) };
+        var carla = Func("Carla") with { FolgaExtra = new FolgaExtraPeriodica(2, D(5), Posicao: PosicaoFolgaExtra.FimDeSemana) };
 
-        var r = GeradorEscala.Gerar(Mes(bia));
+        var r = GeradorEscala.Gerar(Mes(carla));
 
         Assert.Equal([5, 6, 5, 6], new[] { D(5), D(12), D(19), D(26) }.Select(s => Dias(r, s)));
         Assert.All(new[] { D(10), D(11), D(24), D(25) }, d =>
@@ -144,9 +144,9 @@ public class FolgaExtraTests
     [Fact]
     public void Folga_extra_colada_na_folga_normal()
     {
-        var bia = Func("Bia") with { FolgaExtra = new FolgaExtraPeriodica(2, D(5), Posicao: PosicaoFolgaExtra.JuntoDaFolgaNormal) };
+        var carla = Func("Carla") with { FolgaExtra = new FolgaExtraPeriodica(2, D(5), Posicao: PosicaoFolgaExtra.JuntoDaFolgaNormal) };
 
-        var r = GeradorEscala.Gerar(Mes(bia));
+        var r = GeradorEscala.Gerar(Mes(carla));
 
         Assert.Equal([5, 6, 5, 6], new[] { D(5), D(12), D(19), D(26) }.Select(s => Dias(r, s)));
         foreach (var segunda in new[] { D(5), D(19) })
@@ -160,10 +160,10 @@ public class FolgaExtraTests
     [Fact]
     public void Folga_extra_avulsa_vira_folga_a_mais_na_semana()
     {
-        var bia = Func("Bia");
-        var extra = new Ocorrencia(Guid.NewGuid(), bia.Id, TipoOcorrencia.FolgaExtra, D(14), D(14));
+        var carla = Func("Carla");
+        var extra = new Ocorrencia(Guid.NewGuid(), carla.Id, TipoOcorrencia.FolgaExtra, D(14), D(14));
 
-        var r = GeradorEscala.Gerar(Mes(bia, extra));
+        var r = GeradorEscala.Gerar(Mes(carla, extra));
 
         Assert.Equal(TipoAlocacao.Folga, r.Alocacoes.Single(a => a.Data == D(14)).Tipo);
         Assert.Equal(5, Dias(r, D(12)));

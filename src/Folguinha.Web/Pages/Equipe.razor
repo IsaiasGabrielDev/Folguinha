@@ -62,7 +62,7 @@ else
 
     IEnumerable<Funcionario> Filtrados => Dados.Funcionarios
         .Where(f => string.IsNullOrWhiteSpace(_busca)
-                    || $"{f.Nome} {f.Setor} {f.Cargo} {Funcoes(f)}".Contains(_busca.Trim(), StringComparison.CurrentCultureIgnoreCase))
+                    || $"{f.Nome} {f.Setor} {f.Cargo} {Funcoes(f)} {Turno(f)}".Contains(_busca.Trim(), StringComparison.CurrentCultureIgnoreCase))
         .OrderBy(f => f.Nome, StringComparer.CurrentCulture);
 
     List<Funcionario> SemSituacao => [.. Dados.Funcionarios.Where(Precisa)];
@@ -72,8 +72,13 @@ else
     string Funcoes(Funcionario f) =>
         string.Join(", ", (f.Funcoes ?? []).Select(id => Dados.Funcoes.FirstOrDefault(x => x.Id == id)?.Nome).OfType<string>());
 
+    string? Turno(Funcionario f) => Dados.Turnos.FirstOrDefault(t => t.Id == f.TurnoPrincipal) is { } t
+        ? $"{t.Nome} {Formatos.Hora(t.Inicio)}–{Formatos.Hora(t.Fim)}"
+        : null;
+
     string Detalhe(Funcionario f) => string.Join(" · ", new[]
     {
+        Turno(f),
         Formatos.Regime(f.Regime),
         $"{Formatos.Horas(f.CargaSemanal)}/sem",
         Funcoes(f),

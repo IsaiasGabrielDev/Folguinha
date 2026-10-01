@@ -1,4 +1,4 @@
-﻿@inherits PaginaBase
+@inherits PaginaBase
 
 <GuardaSaida Alterado="Alterado" />
 <div class="pilha">
@@ -39,6 +39,23 @@
                     da semana. O turno principal de cada um vira só preferência.</span>
             </span>
             <input class="interruptor" type="checkbox" checked="@Dados.RodizioTurnos" @onchange="AlternarRodizioTurnos" />
+        </label>
+    </div>
+
+    <div class="cartao destaque">
+        <label class="linha fixa" style="gap: .75rem; cursor: pointer;">
+            <span class="cresce">
+                <strong>Folga casada no fim de semana</strong><br />
+                <span class="ajuda pequeno">Sábado e domingo só se folgam juntos: quem ganha o domingo de folga
+                    folga o sábado também. Nas outras semanas a folga cai de segunda a sexta.</span>
+            </span>
+            <input class="interruptor" type="checkbox" checked="@Dados.FolgaCasada" @onchange="AlternarFolgaCasada" />
+        </label>
+        <label class="campo">Domingo de folga
+            <select value="@(Dados.DomingoACada?.ToString() ?? "")" @onchange="TrocarDomingoACada">
+                <option value="">A cada 3 semanas (mínimo da lei)</option>
+                <option value="2">A cada 2 semanas (fim de semana sim, outro não)</option>
+            </select>
         </label>
     </div>
 
@@ -87,6 +104,9 @@
     string _novaFuncao = "";
 
     Task AlternarRodizioTurnos() => Loja.Alterar(d => d with { RodizioTurnos = !d.RodizioTurnos });
+    Task AlternarFolgaCasada() => Loja.Alterar(d => d with { FolgaCasada = !d.FolgaCasada });
+    Task TrocarDomingoACada(ChangeEventArgs a) =>
+        Loja.Alterar(d => d with { DomingoACada = int.TryParse(a.Value?.ToString(), out var n) ? n : null });
 
     DadosDaUnidade DadosTemporarios => Dados with { Turnos = _turnos };
 

@@ -1,4 +1,4 @@
-﻿using Folguinha.Domain.Regras;
+using Folguinha.Domain.Regras;
 using static Folguinha.Domain.Texto;
 
 namespace Folguinha.Domain.Geracao;
@@ -29,6 +29,12 @@ public sealed record EntradaGeracao
     public bool CompensarFeriado { get; init; }
     /// Turno principal vira só preferência: cada pessoa passa por todos os turnos ao longo do mês.
     public bool RodizioTurnos { get; init; }
+    /// Sábado e domingo só se folgam juntos: o domingo do rodízio leva o sábado (que vira a folga
+    /// da semana, e o domingo a mais); fora disso a folga cai de segunda a sexta.
+    public bool FolgaCasada { get; init; }
+    /// Domingo de folga a cada N semanas (2 = fim de semana sim, outro não). Nulo = o mínimo da lei;
+    /// nunca passa dele.
+    public int? DomingoACada { get; init; }
 }
 
 public sealed record ResultadoGeracao(IReadOnlyList<Alocacao> Alocacoes, IReadOnlyList<Violacao> Violacoes)
@@ -56,6 +62,7 @@ sealed class Execucao
     readonly Regra[] obrigatorias;
     readonly Feriado[] feriados;
     readonly int semanasDomingo;
+    readonly int semanasLei;
 
     public Execucao(EntradaGeracao entrada)
     {
@@ -69,7 +76,8 @@ sealed class Execucao
         historico = doFuncionario.Values.SelectMany(x => x).ToList();
         obrigatorias = e.Regras.Where(r => r.Definicao.Nivel == NivelRegra.Obrigatoria && r is not CoberturaMinima).ToArray();
         var domingo = e.Regras.OfType<DomingoDeFolga>().FirstOrDefault() ?? new DomingoDeFolga();
-        semanasDomingo = e.Empresa.Ramo == RamoAtividade.Comercio ? domingo.SemanasComercio : domingo.SemanasOutros;
+        semanasLei = e.Empresa.Ramo == RamoAtividade.Comercio ? domingo.SemanasComercio : domingo.SemanasOutros;
+        semanasDomingo = Math.Clamp(e.DomingoACada ?? semanasLei, 2, semanasLei);
     }
 
     public ResultadoGeracao Rodar()
@@ -99,9 +107,10 @@ sealed class Execucao
         var folgasNoDia = dias.ToDictionary(d => d, d => pessoas.Count(f => fixas[f.Id].Contains(d)));
         var domingo = segunda.AddDays(6);
         var feriado = feriados.FirstOrDefault(x => dias.Contains(x.Data));
+        var domingueiros = QuemFolgaODomingo(pessoas, domingo, fixas);
 
         var ordem = pessoas
-            .OrderByDescending(f => PrecisaFolgarDomingo(f, domingo))
+            .OrderByDescending(f => domingueiros.Contains(f.Id))
             // quem tem prazo de folga dentro da semana escolhe antes, para não sobrar só um dia lotado
             .ThenBy(f => UltimaFolga(f, dias[0]).AddDays(7) is var prazo && prazo <= dias[^1] ? prazo : DateOnly.MaxValue)
             .ThenByDescending(f => feriado is not null && TrabalhouUltimoFeriado(f, feriado.Data))
@@ -116,10 +125,11 @@ sealed class Execucao
             var livres = dias.Where(d => !minhas.Contains(d)).ToList();
             var falta = dias.Count - AlvoDeDias(f, segunda, dias) - minhas.Count;
 
-            if (PrecisaFolgarDomingo(f, domingo) && livres.Remove(domingo))
+            if (domingueiros.Contains(f.Id) && livres.Remove(domingo))
             {
                 Folgar(f, domingo);
                 falta--;
+                if (e.FolgaCasada && livres.Remove(domingo.AddDays(-1))) Folgar(f, domingo.AddDays(-1));
             }
 
             var posicaoExtra = f.FolgaExtra is { } fe && fe.NaSemana(segunda) > 0 ? fe.Posicao : PosicaoFolgaExtra.Livre;
@@ -144,6 +154,10 @@ sealed class Execucao
                 if (posicaoExtra == PosicaoFolgaExtra.DiaUtil
                     && candidatos.Where(d => d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)).ToList() is { Count: > 0 } uteis)
                     candidatos = uteis;
+                if (e.FolgaCasada && candidatos.Where(d => !FimDeSemana(d)).ToList() is { Count: > 0 } semFimDeSemana)
+                    candidatos = semFimDeSemana;
+                if (candidatos.Where(d => !TresFolgasSeguidas(f, d)).ToList() is { Count: > 0 } espalhados)
+                    candidatos = espalhados;
                 var escolhido = candidatos
                     .OrderByDescending(d => Pontuar(f, d, feriado))
                     .ThenBy(d => (d.DayNumber + posicao) % 7)
@@ -155,7 +169,8 @@ sealed class Execucao
             // a folga de domingo obrigatória pode ter deixado um trecho de 7+ dias: folga extra (a lei vem antes da carga)
             while (PrazoDaProximaFolga(UltimaFolga(f, dias[0]), minhas) is var prazo
                    && dias.Max() >= prazo
-                   && livres.Where(d => d <= prazo).OrderByDescending(d => Pontuar(f, d, feriado)).FirstOrDefault() is { } extra
+                   && livres.Where(d => d <= prazo).OrderBy(d => TresFolgasSeguidas(f, d)).ThenBy(d => e.FolgaCasada && FimDeSemana(d))
+                       .ThenByDescending(d => Pontuar(f, d, feriado)).FirstOrDefault() is { } extra
                    && extra != default)
             {
                 livres.Remove(extra);
@@ -210,6 +225,8 @@ sealed class Execucao
         return atual.AddDays(7);
     }
 
+    static bool FimDeSemana(DateOnly d) => d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+
     bool NaoTrabalhaDeQualquerJeito(Funcionario f, DateOnly d) =>
         !Aberto(d)
         || Travada(f, d) is { Trabalha: false }
@@ -240,8 +257,32 @@ sealed class Execucao
         return t is null ? TimeSpan.FromHours(8) : Alocacao.Trabalho(f.Id, e.Inicio, t.Inicio, t.Fim, t.Intervalo).HorasComputadas;
     }
 
-    bool PrecisaFolgarDomingo(Funcionario f, DateOnly domingo) =>
-        NoPeriodo(domingo) && Enumerable.Range(1, semanasDomingo - 1).All(i => Trabalhou(f, domingo.AddDays(-7 * i)));
+    /// Quem folga este domingo: todo mundo que a lei obriga e, até a parte justa da equipe (uma em cada
+    /// N semanas), quem está há mais domingos trabalhando — um de cada turno por vez. Sem a cota, uma
+    /// equipe sem histórico de domingos vencia o prazo toda junta e folgava o mesmo fim de semana.
+    HashSet<Guid> QuemFolgaODomingo(List<Funcionario> pessoas, DateOnly domingo, Dictionary<Guid, HashSet<DateOnly>> fixas)
+    {
+        if (!NoPeriodo(domingo) || !Aberto(domingo)) return [];
+        var noTurno = pessoas.GroupBy(f => f.TurnoPrincipal)
+            .SelectMany(g => g.OrderBy(f => f.Nome, StringComparer.Ordinal).Select((f, i) => (f.Id, i))).ToDictionary(x => x.Id, x => x.i);
+        bool Lei(Funcionario f) => Enumerable.Range(1, semanasLei - 1).All(i => Trabalhou(f, domingo.AddDays(-7 * i)));
+        var fila = pessoas.Where(f => !fixas[f.Id].Contains(domingo))
+            .OrderByDescending(Lei)
+            .ThenByDescending(f => Enumerable.Range(1, semanasLei - 1).TakeWhile(i => Trabalhou(f, domingo.AddDays(-7 * i))).Count())
+            .ThenBy(f => noTurno[f.Id]).ThenBy(f => f.Nome, StringComparer.Ordinal).ThenBy(f => f.Id)
+            .ToList();
+        // sem fim de semana casado nem frequência própria, o domingo livre é escolhido dia a dia (Pontuar)
+        var cota = !e.FolgaCasada && e.DomingoACada is null ? 0
+            : (int)Math.Ceiling(pessoas.Count / (double)semanasDomingo) - pessoas.Count(f => fixas[f.Id].Contains(domingo));
+        return fila.Where((f, i) => Lei(f) || i < cota).Select(f => f.Id).ToHashSet();
+    }
+
+    /// Folgar em `d` deixaria três dias de folga seguidos (contando as já marcadas e o histórico).
+    bool TresFolgasSeguidas(Funcionario f, DateOnly d)
+    {
+        bool Folga(DateOnly x) => folgas.Contains((f.Id, x)) || doFuncionario[f.Id].Any(a => a.Data == x && !a.Trabalha);
+        return Folga(d.AddDays(-1)) && (Folga(d.AddDays(-2)) || Folga(d.AddDays(1))) || Folga(d.AddDays(1)) && Folga(d.AddDays(2));
+    }
 
     int DomingosRecentes(Funcionario f, DateOnly domingo) =>
         Enumerable.Range(1, semanasDomingo - 1).Count(i => Trabalhou(f, domingo.AddDays(-7 * i)));
@@ -271,7 +312,10 @@ sealed class Execucao
         }
 
         var vagas = Aberto(dia)
-            ? Demanda.Aplicaveis(e.Demandas, dia).OrderBy(d => d.EhFaixa).ThenBy(d => d.FuncaoId is null).ThenBy(d => TurnoIndex(d.TurnoId)).ToList()
+            ? Demanda.Aplicaveis(e.Demandas, dia).OrderBy(d => d.EhFaixa)
+                // faixa que poucos turnos alcançam primeiro: senão a faixa larga gasta quem fecharia a loja
+                .ThenBy(d => d.EhFaixa ? e.Turnos.Count(t => Demanda.Cobre(t.Inicio, t.Fim, d.Inicio!.Value) || Demanda.Cobre(d.Inicio!.Value, d.Fim!.Value, t.Inicio)) : 0)
+                .ThenBy(d => d.FuncaoId is null).ThenBy(d => TurnoIndex(d.TurnoId)).ToList()
             : [];
         foreach (var alvo in new Func<Demanda, int>[] { d => d.Minimo, d => d.Ideal })
         foreach (var vaga in vagas)
@@ -323,6 +367,11 @@ sealed class Execucao
                 // otimização. Na ordem inversa, dar uma função a alguém tirava a pessoa do
                 // turno dela — quem era da manhã ia parar na tarde e vice-versa.
                 .ThenBy(x => e.RodizioTurnos || x.f.TurnoPrincipal is null || x.f.TurnoPrincipal == x.t.Id ? 0 : 1)
+                // cobrir turno alheio: tira de quem tem gente sobrando no turno principal, não de quem abre a loja
+                .ThenByDescending(x => e.RodizioTurnos || x.f.TurnoPrincipal is not { } tp || tp == x.t.Id ? 0 : SobraNoTurno(tp, dia, hoje, trabalhadores))
+                // e de quem tem horário parecido: da tarde para o fechamento dá para voltar no dia
+                // seguinte; da manhã para o fechamento, as 11h de descanso prendem a pessoa na tarde
+                .ThenBy(x => e.RodizioTurnos ? 0 : DistanciaDoPrincipal(x.f, x.t))
                 .ThenBy(x => vaga.FuncaoId is null && x.f.Funcoes is { Count: > 0 } ? 1 : 0) // guarda especialistas
                 // o turno de ontem vem antes do rodízio: a pessoa troca de turno na virada da semana,
                 // depois da folga, e não de um dia para o outro
@@ -335,6 +384,14 @@ sealed class Execucao
             Atribuir(escolhido.f, escolhido.aloc, hoje, trabalhadores);
         }
     }
+
+    /// Quantos do turno principal `tp` trabalham hoje além do que o turno precisa segurar sozinho.
+    int SobraNoTurno(Guid tp, DateOnly dia, Dictionary<Guid, Alocacao> hoje, List<Funcionario> trabalhadores) =>
+        e.Funcionarios.Count(p => p.TurnoPrincipal == tp && (trabalhadores.Contains(p) || hoje.GetValueOrDefault(p.Id) is { Trabalha: true }))
+        - PessoasNoTurno(dia, tp);
+
+    double DistanciaDoPrincipal(Funcionario f, Turno t) =>
+        e.Turnos.FirstOrDefault(p => p.Id == f.TurnoPrincipal) is { } p ? Math.Abs((p.Inicio.ToTimeSpan() - t.Inicio.ToTimeSpan()).TotalHours) : 0;
 
     /// Turnos capazes de preencher a vaga: o dela, ou — numa faixa — os que cobrem o instante
     /// mais vazio, que é onde a faixa está furada agora.

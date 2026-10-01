@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Folguinha.Domain;
 
@@ -29,6 +29,8 @@ public sealed record DadosDaUnidade
     public bool RodizioFeriados { get; init; } = true;
     public bool CompensarFeriado { get; init; }
     public bool RodizioTurnos { get; init; }
+    public bool FolgaCasada { get; init; }
+    public int? DomingoACada { get; init; }
     public IReadOnlyList<Ocorrencia> Ocorrencias { get; init; } = [];
     public IReadOnlyList<RegraConfigurada> RegrasConfiguradas { get; init; } = [];
     public IReadOnlyList<Escala> Escalas { get; init; } = [];

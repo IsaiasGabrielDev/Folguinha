@@ -96,6 +96,8 @@
 
 @code {
     [SupplyParameterFromQuery(Name = "passo")] public int? PassoPedido { get; set; }
+    /// ?carregar=exemplo substitui os dados pela loja de exemplo completa (usado pelo executar-exemplo.bat).
+    [SupplyParameterFromQuery] public string? Carregar { get; set; }
 
     static readonly (string Titulo, string Texto)[] Titulos =
     [
@@ -128,6 +130,16 @@
         _entendi = Dados.AceitouAviso;
         // sem empresa, só o passo 0 e o 1 fazem sentido
         if (Passo > 1 && (Dados.Empresa is null || !Dados.AceitouAviso)) Nav.NavigateTo(Link(Dados.AceitouAviso ? 1 : 0), replace: true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Carregar != "exemplo") return;
+        await Loja.Carregar();
+        var hoje = Loja.Hoje.AddMonths(1);
+        await Loja.Substituir(Exemplo.LojaCompleta(new(hoje.Year, hoje.Month, 1)) with { NomeGestor = Dados.NomeGestor }, "Loja de exemplo carregada.");
+        // passo dos feriados: busca os de SP sozinho
+        Nav.NavigateTo(Link(4), replace: true);
     }
 
     void Proximo() => Nav.NavigateTo(Link(Passo + 1));

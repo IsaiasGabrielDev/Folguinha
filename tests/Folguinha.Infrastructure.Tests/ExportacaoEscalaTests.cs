@@ -30,7 +30,7 @@ public class ExportacaoEscalaTests
         _bruno = equipe[1];
         _dados = new DadosDaUnidade
         {
-            NomeGestor = "Isaias",
+            NomeGestor = "Ana",
             NomeUnidade = "Centro",
             Empresa = new Empresa(Guid.NewGuid(), "Loja Exemplo", RamoAtividade.Comercio),
             Funcionarios = equipe,
@@ -81,7 +81,7 @@ public class ExportacaoEscalaTests
                      "Início intervalo", "Fim intervalo", "Total da semana", "Total no período", "Horas extras previstas",
                      "Domingos trabalhados", "Feriados trabalhados", "12/10/2026" })
             Assert.Contains(esperado, bruno);
-        Assert.Contains(bruno, t => t.StartsWith("Versão 1, publicada em 30/09/2026 18:00 por Isaias", StringComparison.Ordinal));
+        Assert.Contains(bruno, t => t.StartsWith("Versão 1, publicada em 30/09/2026 18:00 por Ana", StringComparison.Ordinal));
         Assert.Contains(bruno, t => t.Contains("não comprova a jornada realizada", StringComparison.Ordinal));
     }
 
@@ -128,7 +128,7 @@ public class ExportacaoEscalaTests
         var validacao = TextosPorAba(ExportacaoEscala.Gerar(dados, escala, new OpcoesExportacao(false, false, true)))[ExportacaoEscala.AbaValidacao];
 
         foreach (var esperado in new[] { "Regras verificadas", "Descanso entre jornadas", "CLT art. 66", "Alertas aceitos com justificativa",
-                     "Feriado com escala combinada", "Responsável pela aprovação", "Isaias", "30/09/2026 18:00" })
+                     "Feriado com escala combinada", "Responsável pela aprovação", "Ana", "30/09/2026 18:00" })
             Assert.Contains(esperado, validacao);
     }
 

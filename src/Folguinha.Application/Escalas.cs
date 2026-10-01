@@ -1,4 +1,4 @@
-﻿using Folguinha.Domain;
+using Folguinha.Domain;
 using Folguinha.Domain.Geracao;
 using Folguinha.Domain.Regras;
 using static Folguinha.Domain.Texto;
@@ -124,6 +124,8 @@ public static class Escalas
             RodizioFeriados = dados.RodizioFeriados,
             CompensarFeriado = dados.CompensarFeriado,
             RodizioTurnos = dados.RodizioTurnos,
+            FolgaCasada = dados.FolgaCasada,
+            DomingoACada = dados.DomingoACada,
         });
 
         var escala = (existente ?? new Escala(Guid.NewGuid(), inicio, fim)) with { Rascunho = resultado.Alocacoes };

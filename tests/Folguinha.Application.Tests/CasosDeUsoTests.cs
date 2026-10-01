@@ -20,7 +20,7 @@ public class CasosDeUsoTests
         string[] nomes = ["Ana", "Bruno", "Carla", "Diego", "Elisa", "Felipe", "Gabi", "Hugo"];
         _dados = new DadosDaUnidade
         {
-            NomeGestor = "Isaias",
+            NomeGestor = "Ana",
             Empresa = new Empresa(Guid.NewGuid(), "Loja Centro", RamoAtividade.Comercio),
             Funcionarios = [.. nomes.Select((n, i) => new Funcionario(Guid.NewGuid(), n, Regime.SeisPorUm, TimeSpan.FromHours(44))
             {
@@ -111,7 +111,7 @@ public class CasosDeUsoTests
         Assert.Equal(EstadoEscala.Publicada, escala.Estado);
         Assert.Null(escala.Rascunho);
         Assert.Equal(1, v.Numero);
-        Assert.Equal("Isaias", v.Autor);
+        Assert.Equal("Ana", v.Autor);
         Assert.Equal("Primeira publicação", v.Motivo);
         Assert.Equal(Agora, v.PublicadaEm);
         Assert.Equal(8, v.Afetados.Count);
@@ -347,7 +347,7 @@ public class CasosDeUsoTests
         Assert.Equal(NivelRegra.Alerta, outubro.Definicao.Nivel);
         Assert.Equal(NivelRegra.Preferencia, novembro.Definicao.Nivel);
         Assert.Equal(2, novembro.Definicao.Versao);
-        Assert.Equal("Isaias", novembro.Definicao.Responsavel);
+        Assert.Equal("Ana", novembro.Definicao.Responsavel);
     }
 
     [Fact]
