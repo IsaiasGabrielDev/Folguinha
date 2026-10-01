@@ -45,9 +45,11 @@ docs/design/                  mockups aprovados e ícone
 
 ## Comandos
 
+No Windows, `executar.bat` sobe o app e abre no navegador; `executar-exemplo.bat` já abre com uma loja de exemplo completa (6 pessoas, 3 turnos).
+
 ```bash
 dotnet build Folguinha.slnx                       # compila tudo
-dotnet test Folguinha.slnx                        # testes (136)
+dotnet test Folguinha.slnx                        # testes (164)
 dotnet run --project src/Folguinha.Web            # app em http://localhost:5xxx
 dotnet publish src/Folguinha.Web -c Release -o publicado   # site estático em publicado/wwwroot
 ```
@@ -86,3 +88,7 @@ Instalar é importante: sem isso, o Safari pode apagar os dados de sites que fic
 - No 6x1, a semana anterior a uma folga de domingo obrigatória pode ter 5 dias de trabalho, para não passar de 6 dias seguidos.
 - O horário do intervalo na planilha é uma sugestão (meio da jornada); o app guarda só a duração.
 - As fontes (Google Fonts) só aparecem com internet; offline, o app usa as fontes do sistema.
+
+## Licença
+
+[MIT](LICENSE)

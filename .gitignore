@@ -469,3 +469,9 @@ publicado/
 
 # graphify
 graphify-out/
+
+# Ferramentas locais de desenvolvimento (não fazem parte do app)
+.claude/
+CLAUDE.md
+.impeccable/critique/
+.impeccable/hook.cache.json

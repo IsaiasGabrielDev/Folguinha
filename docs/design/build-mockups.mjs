@@ -119,7 +119,7 @@ const main = page({ body: `
 ${scroll(`
   <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
     <div style="display: flex; flex-direction: column; gap: 4px;">
-      <span style="font-size: 13px; font-weight: 600; color: ${T.ink2};">Loja Centro · Olá, Isaias</span>
+      <span style="font-size: 13px; font-weight: 600; color: ${T.ink2};">Loja Centro · Olá, Ana</span>
       ${h1('Outubro 2026')}
     </div>
     ${avatar('IS', T.coral, '#FFFFFF', 44)}

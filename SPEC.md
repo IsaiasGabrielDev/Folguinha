@@ -38,8 +38,6 @@ tests/Folguinha.Domain.Tests, tests/Folguinha.Application.Tests → xUnit
 - **IndexedDB:** o Safari do iPhone pode apagar dados de sites não instalados após 7 dias sem uso. Mitigação: instalar na tela inicial, pedir `navigator.storage.persist()` e oferecer backup (exportar/importar arquivo).
 - **Tamanho do primeiro carregamento:** usar trimming e compressão no publish.
 
-Local do repositório: `C:\Users\Isaias\source\repos\Folguinha`.
-
 ## Escopo do beta (a partir da ESPEC §17, ajustado)
 **Entra:**
 1. **Empresa e unidade:** nome, CNPJ, ramo, UF/município, fuso, convenção (texto). Horário de funcionamento por dia com **múltiplos períodos**, virada da meia-noite, preparação/fechamento e exceções por data (ESPEC §3–4).
